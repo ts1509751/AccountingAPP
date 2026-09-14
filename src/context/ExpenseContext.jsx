@@ -1,138 +1,118 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { auth, db } from '../firebase/config';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { DEFAULT_CATEGORIES } from '../utils/categories';
 
 const ExpenseContext = createContext();
 export const useExpense = () => useContext(ExpenseContext);
 
-const DEFAULT_CATEGORIES = ['餐飲', '交通', '娛樂', '購物', '薪水', '生活', '投資'];
-
 export const ExpenseProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
-  
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
-  const [selectedMonth, setSelectedMonth] = useState('all');
-  const [editingTransaction, setEditingTransaction] = useState(null);
-  const [transactions, setTransactions] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
 
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
+  const [transactions, setTransactions] = useState([]);
   const [categories, setCategories] = useState(() => {
     const saved = localStorage.getItem('categories');
     return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES;
   });
 
+  // Derived month navigation state
+  const today = new Date();
+  const [viewYear, setViewYear] = useState(today.getFullYear());
+  const [viewMonth, setViewMonth] = useState(today.getMonth()); // 0-indexed
+
+  // Theme
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
   }, [theme]);
 
+  // Categories persistence
   useEffect(() => {
     localStorage.setItem('categories', JSON.stringify(categories));
   }, [categories]);
 
-  // Auth Listener
+  // Auth listener
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsub = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setAuthLoading(false);
     });
-    return unsubscribe;
+    return unsub;
   }, []);
 
-  // Firestore Listener
+  // Firestore listener
   useEffect(() => {
     if (!user) {
       setTransactions([]);
       setDataLoading(false);
       return;
     }
-
     setDataLoading(true);
-    const q = query(
-      collection(db, 'transactions'),
-      where('uid', '==', user.uid)
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(document => ({ id: document.id, ...document.data() }));
-      // Sort by date (descending) then by createdAt
-      data.sort((a, b) => new Date(b.date) - new Date(a.date) || b.createdAt - a.createdAt);
+    const q = query(collection(db, 'transactions'), where('uid', '==', user.uid));
+    const unsub = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      data.sort((a, b) => {
+        const dateDiff = new Date(b.date) - new Date(a.date);
+        return dateDiff !== 0 ? dateDiff : (b.createdAt || 0) - (a.createdAt || 0);
+      });
       setTransactions(data);
       setDataLoading(false);
     });
-
-    return unsubscribe;
+    return unsub;
   }, [user]);
 
-  const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  const toggleTheme = () => setTheme(p => p === 'dark' ? 'light' : 'dark');
+  const logout = () => signOut(auth);
 
-  const addTransaction = async (transaction) => {
-    if (!user) return;
-    try {
-      await addDoc(collection(db, 'transactions'), {
-        ...transaction,
-        uid: user.uid,
-        createdAt: Date.now()
-      });
-    } catch (e) {
-      console.error("Error adding document: ", e);
-    }
+  const prevMonth = () => {
+    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
+    else setViewMonth(m => m - 1);
+  };
+  const nextMonth = () => {
+    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
+    else setViewMonth(m => m + 1);
   };
 
-  const updateTransaction = async (id, updatedData) => {
-    try {
-      const docRef = doc(db, 'transactions', id);
-      await updateDoc(docRef, updatedData);
-      setEditingTransaction(null);
-    } catch (e) {
-      console.error("Error updating document: ", e);
-    }
+  const monthStr = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`;
+
+  const filteredTransactions = useMemo(
+    () => transactions.filter(t => t.date.startsWith(monthStr)),
+    [transactions, monthStr]
+  );
+
+  const income  = useMemo(() => filteredTransactions.filter(t => t.type === 'income' ).reduce((s, t) => s + Number(t.amount), 0), [filteredTransactions]);
+  const expense = useMemo(() => filteredTransactions.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0), [filteredTransactions]);
+  const balance = income - expense;
+
+  const addTransaction = async (tx) => {
+    if (!user) return;
+    await addDoc(collection(db, 'transactions'), { ...tx, uid: user.uid, createdAt: Date.now() });
+  };
+
+  const updateTransaction = async (id, data) => {
+    await updateDoc(doc(db, 'transactions', id), data);
   };
 
   const deleteTransaction = async (id) => {
-    try {
-      await deleteDoc(doc(db, 'transactions', id));
-      if (editingTransaction?.id === id) setEditingTransaction(null);
-    } catch (e) {
-      console.error("Error deleting document: ", e);
-    }
+    await deleteDoc(doc(db, 'transactions', id));
   };
 
-  const addCategory = (category) => {
-    if (category && !categories.includes(category)) setCategories([...categories, category]);
+  const addCategory = (cat) => {
+    if (cat && !categories.includes(cat)) setCategories(prev => [...prev, cat]);
   };
-
-  const deleteCategory = (category) => setCategories(categories.filter(c => c !== category));
-  
-  const logout = () => signOut(auth);
-
-  const availableMonths = [...new Set(transactions.map(t => t.date.substring(0, 7)))].sort().reverse();
-
-  const filteredTransactions = selectedMonth === 'all' 
-    ? transactions 
-    : transactions.filter(t => t.date.startsWith(selectedMonth));
-
-  const income = filteredTransactions
-    .filter(t => t.type === 'income')
-    .reduce((acc, t) => acc + Number(t.amount), 0);
-
-  const expense = filteredTransactions
-    .filter(t => t.type === 'expense')
-    .reduce((acc, t) => acc + Number(t.amount), 0);
-
-  const balance = income - expense;
 
   const value = {
     user, authLoading, dataLoading, logout,
     theme, toggleTheme,
-    transactions, filteredTransactions, 
+    transactions, filteredTransactions,
     addTransaction, updateTransaction, deleteTransaction,
-    editingTransaction, setEditingTransaction,
-    categories, addCategory, deleteCategory,
+    categories, addCategory,
     income, expense, balance,
-    selectedMonth, setSelectedMonth, availableMonths
+    viewYear, viewMonth, prevMonth, nextMonth, monthStr,
   };
 
   return <ExpenseContext.Provider value={value}>{children}</ExpenseContext.Provider>;

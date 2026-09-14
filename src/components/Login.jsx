@@ -1,25 +1,39 @@
+import { useState } from 'react';
 import { auth, googleProvider } from '../firebase/config';
 import { signInWithPopup } from 'firebase/auth';
-import { LogIn } from 'lucide-react';
-import ThemeToggle from './ThemeToggle';
 
 export default function Login() {
+  const [errorMsg, setErrorMsg] = useState('');
+  const [loading, setLoading] = useState(false);
+
   const signInWithGoogle = async () => {
     try {
+      setErrorMsg('');
+      setLoading(true);
       await signInWithPopup(auth, googleProvider);
     } catch (error) {
-      console.error("Login failed", error);
+      setLoading(false);
+      if (error.code === 'auth/popup-closed-by-user') return;
+      if (error.code === 'auth/operation-not-allowed') {
+        setErrorMsg('請先至 Firebase 控制台啟用 Google 登入功能');
+      } else if (error.code === 'auth/unauthorized-domain') {
+        setErrorMsg('目前的網域尚未在 Firebase 授權，請檢查設定');
+      } else {
+        setErrorMsg(`登入失敗：${error.code}`);
+      }
     }
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '2rem' }}>
-      <ThemeToggle />
-      <div className="glass" style={{ padding: '3rem', textAlign: 'center', maxWidth: '400px', width: '100%' }}>
-        <h1 className="title-glass" style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>Expense Tracker</h1>
-        <p className="subtitle" style={{ marginBottom: '2rem' }}>請登入以同步您的專屬雲端記帳資料</p>
-        <button className="btn btn-primary" onClick={signInWithGoogle} style={{ width: '100%', padding: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}>
-          <LogIn size={20} /> 使用 Google 帳號一鍵登入
+    <div className="app-shell">
+      <div className="login-page">
+        <div className="login-logo">💰</div>
+        <h1 className="login-title">我的記帳本</h1>
+        <p className="login-sub">您的個人記帳助理，資料即時同步到雲端，電腦手機都能用</p>
+        {errorMsg && <div className="login-error">{errorMsg}</div>}
+        <button className="login-btn" onClick={signInWithGoogle} disabled={loading}>
+          <span style={{ fontSize: '1.2rem' }}>G</span>
+          {loading ? '登入中...' : '使用 Google 帳號登入'}
         </button>
       </div>
     </div>

@@ -1,63 +1,102 @@
-import ThemeToggle from './components/ThemeToggle';
-import Dashboard from './components/Dashboard';
-import TransactionForm from './components/TransactionForm';
-import TransactionList from './components/TransactionList';
-import Chart from './components/Chart';
-import MonthFilter from './components/MonthFilter';
-import Login from './components/Login';
+import { useState } from 'react';
 import { useExpense } from './context/ExpenseContext';
-import { LogOut } from 'lucide-react';
+import Login from './components/Login';
+import BalanceHero from './components/BalanceHero';
+import TransactionList from './components/TransactionList';
+import QuickAddPanel from './components/QuickAddPanel';
+import EditModal from './components/EditModal';
+import ChartPage from './components/Chart';
+import SettingsModal from './components/SettingsModal';
+import { BookOpen, BarChart2, Plus } from 'lucide-react';
 
 function App() {
-  const { user, authLoading, dataLoading, logout } = useExpense();
+  const { user, authLoading, dataLoading } = useExpense();
+  const [tab, setTab] = useState('ledger');
+  const [showAdd, setShowAdd] = useState(false);
+  const [editingTx, setEditingTx] = useState(null);
 
   if (authLoading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <h2 style={{ color: 'var(--text-primary)' }}>載入中...</h2>
+      <div className="app-shell">
+        <div className="loading-screen">
+          <div className="spinner" />
+          <span>載入中...</span>
+        </div>
       </div>
     );
   }
 
-  if (!user) {
-    return <Login />;
-  }
+  if (!user) return <Login />;
 
   return (
-    <>
-      <ThemeToggle />
-      <main className="app-container">
-        <header className="app-header">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
-            <div style={{ textAlign: 'left' }}>
-              <h1 className="title-glass" style={{ fontSize: '2.5rem', marginBottom: '0.2rem' }}>Expense Tracker</h1>
-              <p className="subtitle" style={{ margin: 0 }}>歡迎，{user.displayName || '使用者'}</p>
-            </div>
-            <button className="btn btn-outline" onClick={logout}>
-              <LogOut size={18} /> 登出
-            </button>
-          </div>
-        </header>
+    <div className="app-shell">
+      {/* ── Top App Bar ── */}
+      <div className="app-bar">
+        <span className="app-bar-title">
+          {tab === 'ledger' ? '我的帳本' : '統計圖表'}
+        </span>
+        <SettingsModal />
+      </div>
 
+      {/* ── Scrollable Body ── */}
+      <div className="app-body">
         {dataLoading ? (
-          <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>正在載入雲端資料...</div>
+          <div className="loading-screen" style={{ height: '60vh' }}>
+            <div className="spinner" />
+            <span>同步雲端資料...</span>
+          </div>
+        ) : tab === 'ledger' ? (
+          <>
+            <BalanceHero />
+            <TransactionList onEdit={(tx) => setEditingTx(tx)} />
+          </>
         ) : (
           <>
-            <MonthFilter />
-            <Dashboard />
-            <div className="main-content-grid">
-              <div className="left-column">
-                <TransactionForm />
-                <Chart />
-              </div>
-              <div className="right-column">
-                <TransactionList />
-              </div>
-            </div>
+            <BalanceHero />
+            <ChartPage />
           </>
         )}
-      </main>
-    </>
+      </div>
+
+      {/* ── Bottom Navigation ── */}
+      <div className="bottom-nav">
+        <button className={`nav-tab ${tab === 'ledger' ? 'active' : ''}`} onClick={() => setTab('ledger')}>
+          <BookOpen size={22} />
+          帳本
+        </button>
+
+        {/* FAB-style Add button */}
+        <button
+          onClick={() => setShowAdd(true)}
+          style={{
+            width: 56, height: 56,
+            borderRadius: '50%',
+            background: 'var(--accent-blue)',
+            border: 'none',
+            color: '#fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer',
+            boxShadow: '0 6px 20px rgba(74,158,255,0.45)',
+            alignSelf: 'center',
+            flexShrink: 0,
+            transition: 'var(--transition)',
+            marginBottom: '4px',
+          }}
+          aria-label="新增記帳"
+        >
+          <Plus size={26} />
+        </button>
+
+        <button className={`nav-tab ${tab === 'chart' ? 'active' : ''}`} onClick={() => setTab('chart')}>
+          <BarChart2 size={22} />
+          圖表
+        </button>
+      </div>
+
+      {/* ── Overlays ── */}
+      {showAdd && <QuickAddPanel onClose={() => setShowAdd(false)} />}
+      {editingTx && <EditModal transaction={editingTx} onClose={() => setEditingTx(null)} />}
+    </div>
   );
 }
 

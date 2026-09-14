@@ -1,64 +1,90 @@
 import { useExpense } from '../context/ExpenseContext';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
-export default function Chart() {
-  const { filteredTransactions, theme } = useExpense();
+const COLORS = ['#4a9eff','#f87171','#34d399','#fbbf24','#a78bfa','#ec4899','#06b6d4','#f97316'];
 
-  // Calculate expenses by category
-  const expenseData = filteredTransactions
+const fmt = (v) => new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', minimumFractionDigits: 0 }).format(v);
+
+export default function ChartPage() {
+  const { filteredTransactions, theme, viewYear, viewMonth } = useExpense();
+  const MONTH_NAMES = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+
+  const textColor = theme === 'dark' ? '#8888aa' : '#5a5a7a';
+  const tooltipBg = theme === 'dark' ? '#1f1f2e' : '#ffffff';
+
+  const expenseByCat = filteredTransactions
     .filter(t => t.type === 'expense')
     .reduce((acc, t) => {
-      const existing = acc.find(item => item.name === t.category);
-      if (existing) {
-        existing.value += Number(t.amount);
-      } else {
-        acc.push({ name: t.category, value: Number(t.amount) });
-      }
+      const f = acc.find(x => x.name === t.category);
+      if (f) f.value += Number(t.amount);
+      else acc.push({ name: t.category, value: Number(t.amount) });
       return acc;
     }, [])
     .sort((a, b) => b.value - a.value);
 
-  const COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
+  const incomeByCat = filteredTransactions
+    .filter(t => t.type === 'income')
+    .reduce((acc, t) => {
+      const f = acc.find(x => x.name === t.category);
+      if (f) f.value += Number(t.amount);
+      else acc.push({ name: t.category, value: Number(t.amount) });
+      return acc;
+    }, [])
+    .sort((a, b) => b.value - a.value);
 
-  if (expenseData.length === 0) {
-    return null;
+  const tooltipStyle = {
+    backgroundColor: tooltipBg,
+    border: '1px solid var(--border)',
+    borderRadius: '12px',
+    color: textColor,
+  };
+
+  if (filteredTransactions.length === 0) {
+    return (
+      <div className="chart-page">
+        <div className="empty-tx" style={{ marginTop: '3rem' }}>
+          <div style={{ fontSize: '3rem' }}>📊</div>
+          <p>此月份尚無資料</p>
+        </div>
+      </div>
+    );
   }
 
-  const textColor = theme === 'dark' ? '#f8fafc' : '#1f2937';
-
   return (
-    <div className="glass chart-container">
-      <h3>支出分佈</h3>
-      <div className="chart-wrapper">
-        <ResponsiveContainer width="100%" height={300}>
-          <PieChart>
-            <Pie
-              data={expenseData}
-              cx="50%"
-              cy="50%"
-              innerRadius={60}
-              outerRadius={100}
-              paddingAngle={5}
-              dataKey="value"
-            >
-              {expenseData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="rgba(255,255,255,0.2)" />
-              ))}
-            </Pie>
-            <Tooltip 
-              formatter={(value) => new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', minimumFractionDigits: 0 }).format(value)}
-              contentStyle={{ 
-                backgroundColor: theme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.9)',
-                borderRadius: '12px',
-                border: '1px solid rgba(255,255,255,0.1)',
-                color: textColor
-              }}
-              itemStyle={{ color: textColor }}
-            />
-            <Legend wrapperStyle={{ color: textColor }} />
-          </PieChart>
-        </ResponsiveContainer>
-      </div>
+    <div className="chart-page">
+      {expenseByCat.length > 0 && (
+        <div className="chart-card">
+          <h3>💸 支出分佈（{viewYear} 年 {MONTH_NAMES[viewMonth]}）</h3>
+          <ResponsiveContainer width="100%" height={260}>
+            <PieChart>
+              <Pie data={expenseByCat} cx="50%" cy="50%" innerRadius={55} outerRadius={95} paddingAngle={4} dataKey="value">
+                {expenseByCat.map((_, i) => (
+                  <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="transparent" />
+                ))}
+              </Pie>
+              <Tooltip formatter={fmt} contentStyle={tooltipStyle} itemStyle={{ color: textColor }} />
+              <Legend wrapperStyle={{ color: textColor, fontSize: '0.8rem' }} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {incomeByCat.length > 0 && (
+        <div className="chart-card">
+          <h3>💵 收入分佈（{viewYear} 年 {MONTH_NAMES[viewMonth]}）</h3>
+          <ResponsiveContainer width="100%" height={260}>
+            <PieChart>
+              <Pie data={incomeByCat} cx="50%" cy="50%" innerRadius={55} outerRadius={95} paddingAngle={4} dataKey="value">
+                {incomeByCat.map((_, i) => (
+                  <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="transparent" />
+                ))}
+              </Pie>
+              <Tooltip formatter={fmt} contentStyle={tooltipStyle} itemStyle={{ color: textColor }} />
+              <Legend wrapperStyle={{ color: textColor, fontSize: '0.8rem' }} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </div>
   );
 }
