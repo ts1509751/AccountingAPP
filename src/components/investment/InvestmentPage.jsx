@@ -9,7 +9,7 @@ const formatMoney = (n) =>
 const formatRaw = (n) =>
   new Intl.NumberFormat('zh-TW', { minimumFractionDigits: 0 }).format(n);
 
-export default function InvestmentPage() {
+export default function InvestmentPage({ externalOpenAdd, onCloseExternalAdd }) {
   const {
     investments,
     loading,
@@ -22,6 +22,14 @@ export default function InvestmentPage() {
   const [activeTab, setActiveTab] = useState('holdings'); // 'holdings' | 'history'
   const [showModal, setShowModal] = useState(false);
   const [editingTx, setEditingTx] = useState(null);
+
+  const isModalOpen = showModal || Boolean(externalOpenAdd);
+
+  const handleClose = () => {
+    setShowModal(false);
+    setEditingTx(null);
+    if (onCloseExternalAdd) onCloseExternalAdd();
+  };
 
   const handleEdit = (tx) => {
     setEditingTx(tx);
@@ -83,7 +91,7 @@ export default function InvestmentPage() {
           </button>
         </div>
 
-        <button className="desktop-add-btn" style={{ display: 'flex' }} onClick={handleOpenAdd}>
+        <button className="inv-action-add-btn" onClick={handleOpenAdd}>
           <Plus size={18} />
           <span>記一筆投資</span>
         </button>
@@ -224,13 +232,10 @@ export default function InvestmentPage() {
       )}
 
       {/* Investment Modal */}
-      {showModal && (
+      {isModalOpen && (
         <InvestmentModal
           transaction={editingTx}
-          onClose={() => {
-            setShowModal(false);
-            setEditingTx(null);
-          }}
+          onClose={handleClose}
         />
       )}
     </div>

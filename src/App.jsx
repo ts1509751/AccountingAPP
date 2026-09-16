@@ -15,6 +15,7 @@ function App() {
   const { user, authLoading, dataLoading } = useExpense();
   const [tab, setTab] = useState('ledger');
   const [showAdd, setShowAdd] = useState(false);
+  const [showInvestmentAdd, setShowInvestmentAdd] = useState(false);
   const [editingTx, setEditingTx] = useState(null);
 
   if (authLoading) {
@@ -73,14 +74,25 @@ function App() {
 
         {/* Right action group */}
         <div className="app-bar-right">
-          <button
-            className="desktop-add-btn"
-            onClick={() => setShowAdd(true)}
-            title="新增記帳"
-          >
-            <Plus size={18} />
-            <span>記一筆</span>
-          </button>
+          {tab === 'investment' ? (
+            <button
+              className="desktop-add-btn"
+              onClick={() => setShowInvestmentAdd(true)}
+              title="新增投資紀錄"
+            >
+              <Plus size={18} />
+              <span>記一筆投資</span>
+            </button>
+          ) : (
+            <button
+              className="desktop-add-btn"
+              onClick={() => setShowAdd(true)}
+              title="新增記帳"
+            >
+              <Plus size={18} />
+              <span>記一筆</span>
+            </button>
+          )}
           <SettingsModal />
         </div>
       </header>
@@ -127,7 +139,10 @@ function App() {
           </div>
         ) : (
           <div className="investment-layout">
-            <InvestmentPage />
+            <InvestmentPage
+              externalOpenAdd={showInvestmentAdd}
+              onCloseExternalAdd={() => setShowInvestmentAdd(false)}
+            />
           </div>
         )}
       </main>
@@ -146,9 +161,15 @@ function App() {
 
         {/* FAB-style Add button */}
         <button
-          onClick={() => setShowAdd(true)}
+          onClick={() => {
+            if (tab === 'investment') {
+              setShowInvestmentAdd(true);
+            } else {
+              setShowAdd(true);
+            }
+          }}
           className="mobile-fab-btn"
-          aria-label="新增記帳"
+          aria-label={tab === 'investment' ? '新增投資紀錄' : '新增記帳'}
         >
           <Plus size={26} />
         </button>
