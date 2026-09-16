@@ -6,8 +6,9 @@ import TransactionList from './components/TransactionList';
 import QuickAddPanel from './components/QuickAddPanel';
 import EditModal from './components/EditModal';
 import ChartPage from './components/Chart';
+import AnalysisPage from './components/AnalysisPage';
 import SettingsModal from './components/SettingsModal';
-import { BookOpen, BarChart2, Plus } from 'lucide-react';
+import { BookOpen, BarChart2, FileText, Plus } from 'lucide-react';
 
 function App() {
   const { user, authLoading, dataLoading } = useExpense();
@@ -31,67 +32,120 @@ function App() {
   return (
     <div className="app-shell">
       {/* ── Top App Bar ── */}
-      <div className="app-bar">
-        <span className="app-bar-title">
-          {tab === 'ledger' ? '我的帳本' : '統計圖表'}
-        </span>
-        <SettingsModal />
-      </div>
+      <header className="app-bar">
+        <div className="app-bar-left">
+          <span className="app-logo">💰</span>
+          <span className="app-bar-title">我的記帳本</span>
+        </div>
+
+        {/* Desktop Navigation Tabs */}
+        <nav className="desktop-nav-tabs">
+          <button
+            className={`desktop-tab ${tab === 'ledger' ? 'active' : ''}`}
+            onClick={() => setTab('ledger')}
+          >
+            <BookOpen size={18} />
+            <span>帳本明細</span>
+          </button>
+          <button
+            className={`desktop-tab ${tab === 'chart' ? 'active' : ''}`}
+            onClick={() => setTab('chart')}
+          >
+            <BarChart2 size={18} />
+            <span>統計圖表</span>
+          </button>
+          <button
+            className={`desktop-tab ${tab === 'analysis' ? 'active' : ''}`}
+            onClick={() => setTab('analysis')}
+          >
+            <FileText size={18} />
+            <span>分析預算</span>
+          </button>
+        </nav>
+
+        {/* Right action group */}
+        <div className="app-bar-right">
+          <button
+            className="desktop-add-btn"
+            onClick={() => setShowAdd(true)}
+            title="新增記帳"
+          >
+            <Plus size={18} />
+            <span>記一筆</span>
+          </button>
+          <SettingsModal />
+        </div>
+      </header>
 
       {/* ── Scrollable Body ── */}
-      <div className="app-body">
+      <main className="app-body">
         {dataLoading ? (
           <div className="loading-screen" style={{ height: '60vh' }}>
             <div className="spinner" />
             <span>同步雲端資料...</span>
           </div>
         ) : tab === 'ledger' ? (
-          <>
-            <BalanceHero />
-            <TransactionList onEdit={(tx) => setEditingTx(tx)} />
-          </>
+          <div className="ledger-layout">
+            <aside className="ledger-summary-col">
+              <div className="desktop-card hero-card">
+                <BalanceHero />
+              </div>
+              <div className="desktop-quick-prompt desktop-only">
+                <p className="prompt-title">快捷操作</p>
+                <button className="desktop-prompt-btn" onClick={() => setShowAdd(true)}>
+                  <Plus size={18} />
+                  <span>點擊立即記一筆</span>
+                </button>
+              </div>
+            </aside>
+            <section className="ledger-tx-col">
+              <div className="desktop-card tx-card">
+                <TransactionList onEdit={(tx) => setEditingTx(tx)} />
+              </div>
+            </section>
+          </div>
+        ) : tab === 'chart' ? (
+          <div className="chart-layout">
+            <div className="desktop-card hero-card chart-hero-card">
+              <BalanceHero />
+            </div>
+            <div className="chart-content-area">
+              <ChartPage />
+            </div>
+          </div>
         ) : (
-          <>
-            <BalanceHero />
-            <ChartPage />
-          </>
+          <div className="analysis-layout">
+            <AnalysisPage />
+          </div>
         )}
-      </div>
+      </main>
 
-      {/* ── Bottom Navigation ── */}
-      <div className="bottom-nav">
+      {/* ── Mobile Bottom Navigation (Hidden on Desktop) ── */}
+      <nav className="bottom-nav mobile-only">
         <button className={`nav-tab ${tab === 'ledger' ? 'active' : ''}`} onClick={() => setTab('ledger')}>
-          <BookOpen size={22} />
-          帳本
+          <BookOpen size={20} />
+          <span>明細</span>
+        </button>
+
+        <button className={`nav-tab ${tab === 'chart' ? 'active' : ''}`} onClick={() => setTab('chart')}>
+          <BarChart2 size={20} />
+          <span>圖表</span>
         </button>
 
         {/* FAB-style Add button */}
         <button
           onClick={() => setShowAdd(true)}
-          style={{
-            width: 56, height: 56,
-            borderRadius: '50%',
-            background: 'var(--accent-blue)',
-            border: 'none',
-            color: '#fff',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer',
-            boxShadow: '0 6px 20px rgba(74,158,255,0.45)',
-            alignSelf: 'center',
-            flexShrink: 0,
-            transition: 'var(--transition)',
-            marginBottom: '4px',
-          }}
+          className="mobile-fab-btn"
           aria-label="新增記帳"
         >
           <Plus size={26} />
         </button>
 
-        <button className={`nav-tab ${tab === 'chart' ? 'active' : ''}`} onClick={() => setTab('chart')}>
-          <BarChart2 size={22} />
-          圖表
+        <button className={`nav-tab ${tab === 'analysis' ? 'active' : ''}`} onClick={() => setTab('analysis')}>
+          <FileText size={20} />
+          <span>報告</span>
         </button>
-      </div>
+      </nav>
 
       {/* ── Overlays ── */}
       {showAdd && <QuickAddPanel onClose={() => setShowAdd(false)} />}

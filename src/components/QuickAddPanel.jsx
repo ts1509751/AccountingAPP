@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useExpense } from '../context/ExpenseContext';
 import { getCategoryIcon } from '../utils/categories';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, Calendar } from 'lucide-react';
 
 export default function QuickAddPanel({ onClose }) {
   const { categories, addCategory, addTransaction } = useExpense();
@@ -10,6 +10,7 @@ export default function QuickAddPanel({ onClose }) {
   const [type, setType] = useState('expense');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
+  const [date, setDate] = useState(today);
   const [selectedCategory, setSelectedCategory] = useState(categories[0] || '');
   const [isAddingCat, setIsAddingCat] = useState(false);
   const [newCatName, setNewCatName] = useState('');
@@ -31,10 +32,11 @@ export default function QuickAddPanel({ onClose }) {
       amount: Number(amount),
       category: selectedCategory,
       description: description.trim(),
-      date: today,
+      date: date || today,
     });
     setAmount('');
     setDescription('');
+    setDate(today);
     onClose();
   };
 
@@ -121,13 +123,34 @@ export default function QuickAddPanel({ onClose }) {
             placeholder="備註（晚餐、電影...）"
             onKeyDown={e => e.key === 'Enter' && handleSubmit()}
           />
-          <button className="panel-add-btn" onClick={handleSubmit}>
+          <button className="panel-add-btn" onClick={handleSubmit} title="新增紀錄">
             <Plus size={24} />
           </button>
         </div>
 
-        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-          記錄日期：{today}（如需修改日期請完成後點擊編輯）
+        {/* Date Selector Row */}
+        <div className="panel-date-picker-row">
+          <div className="panel-date-left">
+            <Calendar size={16} className="text-muted" />
+            <span className="panel-date-label">記帳日期：</span>
+            <input
+              type="date"
+              className="panel-date-input"
+              value={date}
+              onChange={e => setDate(e.target.value)}
+            />
+          </div>
+          {date === today ? (
+            <span className="panel-date-badge">今日 (預設)</span>
+          ) : (
+            <button
+              type="button"
+              className="panel-date-today-btn"
+              onClick={() => setDate(today)}
+            >
+              重設為今日
+            </button>
+          )}
         </div>
       </div>
     </>
