@@ -1511,3 +1511,196 @@ input:checked + .toggle-slider::before {
   font-size: 1rem;
   font-weight: 700;
 }
+
+/* =====================================================
+   INVESTMENT MODULE STYLES
+   ===================================================== */
+.investment-layout {
+  padding: 1.25rem 1rem 2.5rem;
+  max-width: 920px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.investment-page-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.investment-hero-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 580px) {
+  .investment-hero-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.investment-hero-card {
+  padding: 1.25rem 1.4rem;
+}
+
+.inv-hero-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.inv-hero-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.inv-hero-val {
+  font-size: 1.95rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  margin-bottom: 0.35rem;
+  line-height: 1.1;
+}
+
+.inv-hero-sub {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+.inv-badge-blue {
+  background: var(--accent-blue-dim);
+  color: var(--accent-blue);
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.inv-badge-green {
+  background: var(--accent-green-dim);
+  color: var(--accent-green);
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.inv-badge-red {
+  background: var(--accent-red-dim);
+  color: var(--accent-red);
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.investment-nav-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.holdings-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.holding-card {
+  padding: 1.25rem 1.35rem;
+  transition: var(--transition);
+}
+.holding-card:hover {
+  border-color: rgba(74, 158, 255, 0.35);
+  transform: translateY(-1px);
+}
+
+.holding-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.1rem;
+}
+
+.holding-symbol {
+  font-size: 1.18rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.holding-type-tag {
+  display: inline-block;
+  font-size: 0.72rem;
+  background: var(--bg-pill);
+  color: var(--text-secondary);
+  padding: 0.15rem 0.55rem;
+  border-radius: 6px;
+  margin-top: 0.3rem;
+  font-weight: 600;
+}
+
+.holding-shares-count {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+
+.holding-sub-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+}
+
+.holding-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.4rem;
+  background: var(--bg-pill);
+  padding: 0.8rem 0.6rem;
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+.h-stat-label {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+}
+
+.h-stat-val {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* Investment Transaction Item */
+.investment-tx-item {
+  border-left: 3px solid transparent;
+}
+
+.inv-action-buy {
+  background: var(--accent-green-dim);
+  color: var(--accent-green);
+}
+
+.inv-action-sell {
+  background: var(--accent-red-dim);
+  color: var(--accent-red);
+}
+
+.investment-modal-sheet {
+  max-height: 85vh;
+  overflow-y: auto;
+}
+

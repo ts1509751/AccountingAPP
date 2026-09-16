@@ -7,8 +7,9 @@ import QuickAddPanel from './components/QuickAddPanel';
 import EditModal from './components/EditModal';
 import ChartPage from './components/Chart';
 import AnalysisPage from './components/AnalysisPage';
+import InvestmentPage from './components/investment/InvestmentPage';
 import SettingsModal from './components/SettingsModal';
-import { BookOpen, BarChart2, FileText, Plus } from 'lucide-react';
+import { BookOpen, BarChart2, FileText, TrendingUp, Plus } from 'lucide-react';
 
 function App() {
   const { user, authLoading, dataLoading } = useExpense();
@@ -60,6 +61,13 @@ function App() {
           >
             <FileText size={18} />
             <span>分析預算</span>
+          </button>
+          <button
+            className={`desktop-tab ${tab === 'investment' ? 'active' : ''}`}
+            onClick={() => setTab('investment')}
+          >
+            <TrendingUp size={18} />
+            <span>投資理財</span>
           </button>
         </nav>
 
@@ -113,9 +121,13 @@ function App() {
               <ChartPage />
             </div>
           </div>
-        ) : (
+        ) : tab === 'analysis' ? (
           <div className="analysis-layout">
             <AnalysisPage />
+          </div>
+        ) : (
+          <div className="investment-layout">
+            <InvestmentPage />
           </div>
         )}
       </main>
@@ -123,12 +135,12 @@ function App() {
       {/* ── Mobile Bottom Navigation (Hidden on Desktop) ── */}
       <nav className="bottom-nav mobile-only">
         <button className={`nav-tab ${tab === 'ledger' ? 'active' : ''}`} onClick={() => setTab('ledger')}>
-          <BookOpen size={20} />
+          <BookOpen size={19} />
           <span>明細</span>
         </button>
 
         <button className={`nav-tab ${tab === 'chart' ? 'active' : ''}`} onClick={() => setTab('chart')}>
-          <BarChart2 size={20} />
+          <BarChart2 size={19} />
           <span>圖表</span>
         </button>
 
@@ -142,8 +154,13 @@ function App() {
         </button>
 
         <button className={`nav-tab ${tab === 'analysis' ? 'active' : ''}`} onClick={() => setTab('analysis')}>
-          <FileText size={20} />
+          <FileText size={19} />
           <span>報告</span>
+        </button>
+
+        <button className={`nav-tab ${tab === 'investment' ? 'active' : ''}`} onClick={() => setTab('investment')}>
+          <TrendingUp size={19} />
+          <span>投資</span>
         </button>
       </nav>
 
