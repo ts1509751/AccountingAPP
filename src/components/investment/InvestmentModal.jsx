@@ -52,23 +52,23 @@ export default function InvestmentModal({ transaction, onClose }) {
   };
 
   const handleBlur = () => {
-    // Delay slightly to let clicks on suggestions register
+    // Delay slightly to let clicks/touches on suggestions register
     setTimeout(() => {
       setShowSuggestions(false);
-      // If user typed only code e.g. 2330, automatically format to "2330 台積電"
-      const matched = findStockByCode(symbol);
+      // Auto format e.g. 2330 -> "2330 台積電"
+      const matched = findStockByCode(symbol) || detectedStock;
       if (matched && !symbol.includes(matched.name)) {
         setSymbol(`${matched.code} ${matched.name}`);
         setAssetType(matched.type);
         setDetectedStock(matched);
       }
-    }, 200);
+    }, 250);
   };
 
-  // Compute base trade value
+  // Compute base trade value - 無條件捨去至個位數
   const numPrice = Number(price) || 0;
   const numShares = Number(shares) || 0;
-  const turnover = numPrice * numShares;
+  const turnover = Math.floor(numPrice * numShares);
 
   // Auto calculate fee & tax when price, shares, action, assetType or discountRate changes (if user hasn't typed a completely custom one)
   const autoCalculate = (rate = discountRate) => {
@@ -78,19 +78,19 @@ export default function InvestmentModal({ transaction, onClose }) {
       return;
     }
 
-    // Fee: turnover * 0.001425 * rate, min 20 TWD (unless rate is 0)
+    // Fee: turnover * 0.001425 * rate, min 20 TWD (unless rate is 0), 無條件捨去至個位數
     let rawFee = 0;
     if (rate > 0) {
-      rawFee = Math.max(20, Math.round(turnover * 0.001425 * rate));
+      rawFee = Math.max(20, Math.floor(turnover * 0.001425 * rate));
     }
     setFee(String(rawFee));
 
-    // Tax: only for sell
+    // Tax: only for sell, 無條件捨去至個位數
     if (action === 'sell') {
       if (assetType === 'stock') {
-        setTax(String(Math.round(turnover * 0.003))); // 0.3%
+        setTax(String(Math.floor(turnover * 0.003))); // 0.3%
       } else if (assetType === 'etf') {
-        setTax(String(Math.round(turnover * 0.001))); // 0.1%
+        setTax(String(Math.floor(turnover * 0.001))); // 0.1%
       } else {
         setTax('0');
       }
@@ -104,27 +104,36 @@ export default function InvestmentModal({ transaction, onClose }) {
     autoCalculate(rate);
   };
 
-  // Compute final total amount
-  const numFee = Number(fee) || 0;
-  const numTax = Number(tax) || 0;
-  const totalAmount = action === 'buy'
-    ? turnover + numFee
-    : Math.max(0, turnover - numFee - numTax);
+  // Compute final total amount - 無條件捨去至個位數
+  const numFee = Math.floor(Number(fee) || 0);
+  const numTax = Math.floor(Number(tax) || 0);
+  const totalAmount = Math.floor(
+    action === 'buy'
+      ? turnover + numFee
+      : Math.max(0, turnover - numFee - numTax)
+  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!symbol.trim() || numPrice <= 0 || numShares <= 0 || !date) return;
 
+    // Resolve symbol with auto-recognized stock name if code only
+    const matched = findStockByCode(symbol) || detectedStock;
+    const finalSymbol = matched && !symbol.includes(matched.name)
+      ? `${matched.code} ${matched.name}`
+      : symbol.trim();
+
     const data = {
       action,
       assetType,
-      symbol: symbol.trim(),
+      symbol: finalSymbol,
       date,
       price: numPrice,
       shares: numShares,
-      fee: numFee,
-      tax: numTax,
-      totalAmount,
+      fee: Math.floor(numFee),
+      tax: Math.floor(numTax),
+      turnover: Math.floor(turnover),
+      totalAmount: Math.floor(totalAmount),
       notes: notes.trim(),
     };
 
@@ -208,9 +217,14 @@ export default function InvestmentModal({ transaction, onClose }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
               <label className="modal-label" style={{ margin: 0 }}>標的代號或名稱</label>
               {detectedStock && (
-                <span className="stock-detected-tag" onClick={() => selectStock(detectedStock)} title="點擊自動補全代碼與名稱">
+                <span
+                  className="stock-detected-tag"
+                  onPointerDown={(e) => { e.preventDefault(); selectStock(detectedStock); }}
+                  onClick={() => selectStock(detectedStock)}
+                  title="點擊自動補全代碼與名稱"
+                >
                   <Sparkles size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '2px' }} />
-                  已辨識：{detectedStock.name} ({detectedStock.type === 'etf' ? 'ETF' : '股票'})
+                  {detectedStock.name}
                 </span>
               )}
             </div>
@@ -227,6 +241,30 @@ export default function InvestmentModal({ transaction, onClose }) {
               required
             />
 
+            {/* Mobile-friendly detected stock banner right below input */}
+            {detectedStock && (
+              <div
+                className="stock-mobile-detected-banner"
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  selectStock(detectedStock);
+                }}
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  selectStock(detectedStock);
+                }}
+                onClick={() => selectStock(detectedStock)}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Sparkles size={15} style={{ color: 'var(--accent-blue)', flexShrink: 0 }} />
+                  <span style={{ fontSize: '0.84rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    已識別：<strong>{detectedStock.code} {detectedStock.name}</strong> ({detectedStock.type === 'etf' ? 'ETF' : '股票'})
+                  </span>
+                </div>
+                <span className="stock-auto-apply-btn">點擊套用</span>
+              </div>
+            )}
+
             {/* Suggestions dropdown */}
             {showSuggestions && suggestions.length > 0 && (
               <div className="stock-autocomplete-dropdown">
@@ -234,7 +272,15 @@ export default function InvestmentModal({ transaction, onClose }) {
                   <div
                     key={s.code}
                     className="stock-autocomplete-item"
-                    onMouseDown={() => selectStock(s)}
+                    onPointerDown={(e) => {
+                      e.preventDefault();
+                      selectStock(s);
+                    }}
+                    onTouchStart={(e) => {
+                      e.preventDefault();
+                      selectStock(s);
+                    }}
+                    onClick={() => selectStock(s)}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <span className="stock-code-badge">{s.code}</span>

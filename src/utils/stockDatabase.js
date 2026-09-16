@@ -134,12 +134,47 @@ export const STOCK_DATABASE = [
 ];
 
 /**
- * Find exact stock match by code
+ * Normalize input: converts full-width numbers and characters (common on mobile keyboards) to half-width
+ */
+export function normalizeQuery(str) {
+  if (!str) return '';
+  return String(str)
+    // Full-width numbers ０-９ (0xFF10 - 0xFF19) -> 0-9 (0x30 - 0x39)
+    .replace(/[\uFF10-\uFF19]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0))
+    // Full-width uppercase letters Ａ-Ｚ
+    .replace(/[\uFF21-\uFF3A]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0))
+    // Full-width lowercase letters ａ-ｚ
+    .replace(/[\uFF41-\uFF5A]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0))
+    // Remove invisible spaces / non-breaking spaces
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .trim()
+    .toUpperCase();
+}
+
+/**
+ * Find exact stock match by code or prefix
  */
 export function findStockByCode(code) {
   if (!code) return null;
-  const clean = code.trim().toUpperCase();
-  return STOCK_DATABASE.find(s => s.code.toUpperCase() === clean) || null;
+  const clean = normalizeQuery(code);
+  if (!clean) return null;
+
+  // 1. Direct exact code match
+  const exact = STOCK_DATABASE.find(s => s.code.toUpperCase() === clean);
+  if (exact) return exact;
+
+  // 2. Extract leading alphanumeric token (e.g. user typed "2330 " or "2330-")
+  const leadingToken = clean.split(/[\s,\-_]+/)[0];
+  if (leadingToken && leadingToken.length >= 3) {
+    const tokenMatch = STOCK_DATABASE.find(s => s.code.toUpperCase() === leadingToken);
+    if (tokenMatch) return tokenMatch;
+  }
+
+  // 3. Match by name if exact name matches
+  const nameMatch = STOCK_DATABASE.find(s => s.name.toUpperCase() === clean);
+  if (nameMatch) return nameMatch;
+
+  return null;
 }
 
 /**
@@ -147,13 +182,15 @@ export function findStockByCode(code) {
  */
 export function searchStocks(query, maxResults = 8) {
   if (!query) return [];
-  const q = query.trim().toUpperCase();
+  const q = normalizeQuery(query);
   if (q.length === 0) return [];
 
   const results = [];
   for (const item of STOCK_DATABASE) {
-    const codeMatch = item.code.toUpperCase().includes(q);
-    const nameMatch = item.name.toUpperCase().includes(q);
+    const normCode = item.code.toUpperCase();
+    const normName = item.name.toUpperCase();
+    const codeMatch = normCode.includes(q);
+    const nameMatch = normName.includes(q);
     if (codeMatch || nameMatch) {
       results.push(item);
       if (results.length >= maxResults) break;
@@ -161,3 +198,4 @@ export function searchStocks(query, maxResults = 8) {
   }
   return results;
 }
+

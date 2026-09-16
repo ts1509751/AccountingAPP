@@ -1821,3 +1821,50 @@ input:checked + .toggle-slider::before {
   font-weight: 500;
 }
 
+.stock-detected-tag {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent-blue);
+  background: var(--accent-blue-dim);
+  border: 1px solid var(--border-active);
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: var(--transition);
+}
+.stock-detected-tag:hover {
+  filter: brightness(1.15);
+  transform: translateY(-1px);
+}
+
+.stock-mobile-detected-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--accent-blue-dim);
+  border: 1px solid var(--border-active);
+  padding: 0.55rem 0.85rem;
+  border-radius: var(--radius-md);
+  margin-top: 0.5rem;
+  cursor: pointer;
+  animation: fadeIn 0.2s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.stock-mobile-detected-banner:active {
+  transform: scale(0.99);
+}
+
+.stock-auto-apply-btn {
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: var(--accent-blue);
+  color: #fff;
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+

@@ -60,6 +60,10 @@ export const InvestmentProvider = ({ children }) => {
     if (!user) return;
     await addDoc(collection(db, 'investments'), {
       ...item,
+      fee: Math.floor(Number(item.fee) || 0),
+      tax: Math.floor(Number(item.tax) || 0),
+      turnover: Math.floor(Number(item.price || 0) * Number(item.shares || 0)),
+      totalAmount: Math.floor(Number(item.totalAmount) || 0),
       uid: user.uid,
       createdAt: Date.now(),
     });
@@ -67,7 +71,14 @@ export const InvestmentProvider = ({ children }) => {
 
   // Update transaction
   const updateInvestment = async (id, data) => {
-    await updateDoc(doc(db, 'investments', id), data);
+    const sanitized = {
+      ...data,
+      fee: Math.floor(Number(data.fee) || 0),
+      tax: Math.floor(Number(data.tax) || 0),
+      turnover: Math.floor(Number(data.price || 0) * Number(data.shares || 0)),
+      totalAmount: Math.floor(Number(data.totalAmount) || 0),
+    };
+    await updateDoc(doc(db, 'investments', id), sanitized);
   };
 
   // Delete transaction
@@ -104,11 +115,12 @@ export const InvestmentProvider = ({ children }) => {
       const item = symbolMap[sym];
       const shares = Number(tx.shares) || 0;
       const price = Number(tx.price) || 0;
-      const fee = Number(tx.fee) || 0;
-      const tax = Number(tx.tax) || 0;
+      const fee = Math.floor(Number(tx.fee) || 0);
+      const tax = Math.floor(Number(tx.tax) || 0);
+      const turnover = Math.floor(price * shares);
 
       if (tx.action === 'buy') {
-        const buyAmount = (price * shares) + fee;
+        const buyAmount = Math.floor(turnover + fee);
         item.totalCost += buyAmount;
         item.currentShares += shares;
         item.totalBuyShares += shares;
@@ -117,12 +129,12 @@ export const InvestmentProvider = ({ children }) => {
         // Average cost before sell
         const avgCost = item.currentShares > 0 ? item.totalCost / item.currentShares : 0;
         const sharesToSell = Math.min(shares, item.currentShares);
-        const costOfSold = avgCost * sharesToSell;
-        const netSellProceeds = (price * shares) - fee - tax;
-        const pnl = netSellProceeds - costOfSold;
+        const costOfSold = Math.floor(avgCost * sharesToSell);
+        const netSellProceeds = Math.floor(turnover - fee - tax);
+        const pnl = Math.floor(netSellProceeds - costOfSold);
 
         item.realizedPnL += pnl;
-        item.totalCost = Math.max(0, item.totalCost - costOfSold);
+        item.totalCost = Math.max(0, Math.floor(item.totalCost - costOfSold));
         item.currentShares = Math.max(0, item.currentShares - shares);
         item.totalSellShares += shares;
         item.sellCount++;
@@ -134,18 +146,22 @@ export const InvestmentProvider = ({ children }) => {
 
     const list = Object.values(symbolMap).map(h => {
       const avgPrice = h.currentShares > 0 ? h.totalCost / h.currentShares : 0;
-      overallCost += h.totalCost;
-      overallPnL += h.realizedPnL;
+      const roundedTotalCost = Math.floor(h.totalCost);
+      const roundedPnL = Math.floor(h.realizedPnL);
+      overallCost += roundedTotalCost;
+      overallPnL += roundedPnL;
       return {
         ...h,
+        totalCost: roundedTotalCost,
+        realizedPnL: roundedPnL,
         avgPrice,
       };
     });
 
     return {
       holdings: list,
-      totalCostBasis: overallCost,
-      totalRealizedPnL: overallPnL,
+      totalCostBasis: Math.floor(overallCost),
+      totalRealizedPnL: Math.floor(overallPnL),
     };
   }, [investments]);
 
