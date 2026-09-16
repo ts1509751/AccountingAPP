@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useInvestment } from '../../context/InvestmentContext';
-import { X, Calculator, ArrowDownRight, ArrowUpRight } from 'lucide-react';
+import { X, Calculator, ArrowDownRight, ArrowUpRight, Sparkles } from 'lucide-react';
+import { findStockByCode, searchStocks } from '../../utils/stockDatabase';
 
 export default function InvestmentModal({ transaction, onClose }) {
   const { addInvestment, updateInvestment } = useInvestment();
@@ -11,6 +12,11 @@ export default function InvestmentModal({ transaction, onClose }) {
   const [action, setAction] = useState(transaction?.action || 'buy');
   const [assetType, setAssetType] = useState(transaction?.assetType || 'stock');
   const [symbol, setSymbol] = useState(transaction?.symbol || '');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [detectedStock, setDetectedStock] = useState(() => {
+    return transaction?.symbol ? findStockByCode(transaction.symbol) : null;
+  });
+
   const [date, setDate] = useState(transaction?.date || today);
   const [price, setPrice] = useState(transaction?.price ? String(transaction.price) : '');
   const [shares, setShares] = useState(transaction?.shares ? String(transaction.shares) : '');
@@ -18,6 +24,46 @@ export default function InvestmentModal({ transaction, onClose }) {
   const [tax, setTax] = useState(transaction?.tax !== undefined ? String(transaction.tax) : '0');
   const [notes, setNotes] = useState(transaction?.notes || '');
   const [discountRate, setDiscountRate] = useState(1); // 1 = 100%, 0.6 = 6折, 0.28 = 2.8折, 0 = 免手續費
+
+  // Filter autocomplete suggestions based on input
+  const suggestions = useMemo(() => {
+    if (!symbol || !showSuggestions) return [];
+    return searchStocks(symbol, 6);
+  }, [symbol, showSuggestions]);
+
+  // Handle symbol change & auto-detection
+  const handleSymbolChange = (val) => {
+    setSymbol(val);
+    setShowSuggestions(true);
+    const matched = findStockByCode(val);
+    if (matched) {
+      setDetectedStock(matched);
+      if (matched.type) setAssetType(matched.type);
+    } else {
+      setDetectedStock(null);
+    }
+  };
+
+  const selectStock = (item) => {
+    setSymbol(`${item.code} ${item.name}`);
+    setAssetType(item.type);
+    setDetectedStock(item);
+    setShowSuggestions(false);
+  };
+
+  const handleBlur = () => {
+    // Delay slightly to let clicks on suggestions register
+    setTimeout(() => {
+      setShowSuggestions(false);
+      // If user typed only code e.g. 2330, automatically format to "2330 台積電"
+      const matched = findStockByCode(symbol);
+      if (matched && !symbol.includes(matched.name)) {
+        setSymbol(`${matched.code} ${matched.name}`);
+        setAssetType(matched.type);
+        setDetectedStock(matched);
+      }
+    }, 200);
+  };
 
   // Compute base trade value
   const numPrice = Number(price) || 0;
@@ -158,16 +204,49 @@ export default function InvestmentModal({ transaction, onClose }) {
           </div>
 
           {/* Symbol / Name */}
-          <div className="modal-field">
-            <label className="modal-label">標的代號或名稱</label>
+          <div className="modal-field" style={{ position: 'relative' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+              <label className="modal-label" style={{ margin: 0 }}>標的代號或名稱</label>
+              {detectedStock && (
+                <span className="stock-detected-tag" onClick={() => selectStock(detectedStock)} title="點擊自動補全代碼與名稱">
+                  <Sparkles size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '2px' }} />
+                  已辨識：{detectedStock.name} ({detectedStock.type === 'etf' ? 'ETF' : '股票'})
+                </span>
+              )}
+            </div>
+
             <input
               type="text"
               className="modal-input"
-              placeholder="例如：2330 台積電、0050、VT"
+              placeholder="輸入代號 (如 2330, 0050, NVDA) 或名稱"
               value={symbol}
-              onChange={e => setSymbol(e.target.value)}
+              onChange={e => handleSymbolChange(e.target.value)}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={handleBlur}
+              autoComplete="off"
               required
             />
+
+            {/* Suggestions dropdown */}
+            {showSuggestions && suggestions.length > 0 && (
+              <div className="stock-autocomplete-dropdown">
+                {suggestions.map(s => (
+                  <div
+                    key={s.code}
+                    className="stock-autocomplete-item"
+                    onMouseDown={() => selectStock(s)}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span className="stock-code-badge">{s.code}</span>
+                      <span className="stock-name-text">{s.name}</span>
+                    </div>
+                    <span className="stock-type-badge">
+                      {s.type === 'etf' ? 'ETF' : '股票'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Date */}

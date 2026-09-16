@@ -1746,3 +1746,78 @@ input:checked + .toggle-slider::before {
   overflow-y: auto;
 }
 
+/* Stock Auto-Recognition & Autocomplete Dropdown */
+.stock-detected-tag {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent-blue);
+  background: var(--accent-blue-dim);
+  border: 1px solid var(--border-active);
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  transition: var(--transition);
+  animation: fadeIn 0.2s ease;
+}
+.stock-detected-tag:hover {
+  background: var(--accent-blue);
+  color: #fff;
+}
+
+.stock-autocomplete-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-active);
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+  max-height: 220px;
+  overflow-y: auto;
+  z-index: 60;
+  padding: 0.3rem;
+  animation: slideUp 0.18s ease;
+}
+
+.stock-autocomplete-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition);
+}
+.stock-autocomplete-item:hover {
+  background: var(--bg-card-hover);
+}
+
+.stock-code-badge {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--accent-blue);
+  background: var(--bg-pill);
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  font-family: monospace;
+}
+
+.stock-name-text {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.stock-type-badge {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  background: var(--bg-pill);
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
