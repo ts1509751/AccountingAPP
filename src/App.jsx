@@ -36,7 +36,7 @@ function App() {
       {/* ── Top App Bar ── */}
       <header className="app-bar">
         <div className="app-bar-left">
-          <span className="app-logo">💰</span>
+          <img src="/app-icon.png" alt="Logo" className="app-bar-logo-img" />
           <span className="app-bar-title">我的記帳本</span>
         </div>
 

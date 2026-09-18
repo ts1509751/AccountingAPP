@@ -27,7 +27,7 @@ export default function Login() {
   return (
     <div className="app-shell">
       <div className="login-page">
-        <div className="login-logo">💰</div>
+        <img src="/app-icon.png" alt="我的記帳本" className="login-logo-img" />
         <h1 className="login-title">我的記帳本</h1>
         <p className="login-sub">您的個人記帳助理，資料即時同步到雲端，電腦手機都能用</p>
         {errorMsg && <div className="login-error">{errorMsg}</div>}

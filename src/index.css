@@ -2327,6 +2327,30 @@ input:checked + .toggle-slider::before {
   cursor: not-allowed;
 }
 
+/* =====================================================
+   APP LOGO IMAGE STYLES
+   ===================================================== */
+.app-bar-logo-img {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  object-fit: cover;
+  box-shadow: 0 2px 6px var(--shadow);
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.login-logo-img {
+  width: 76px;
+  height: 76px;
+  border-radius: 18px;
+  object-fit: cover;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 8px 24px var(--shadow);
+  animation: float 3s ease-in-out infinite;
+}
+
+
 
 
 
