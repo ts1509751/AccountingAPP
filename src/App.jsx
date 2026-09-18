@@ -10,6 +10,7 @@ import AnalysisPage from './components/AnalysisPage';
 import InvestmentPage from './components/investment/InvestmentPage';
 import SettingsModal from './components/SettingsModal';
 import { BookOpen, BarChart2, FileText, TrendingUp, Plus } from 'lucide-react';
+import appLogo from './assets/logo.png';
 
 function App() {
   const { user, authLoading, dataLoading } = useExpense();
@@ -36,9 +37,10 @@ function App() {
       {/* ── Top App Bar ── */}
       <header className="app-bar">
         <div className="app-bar-left">
-          <img src="/app-icon.png" alt="Logo" className="app-bar-logo-img" />
+          <img src={appLogo} alt="Logo" className="app-bar-logo-img" />
           <span className="app-bar-title">我的記帳本</span>
         </div>
+
 
         {/* Desktop Navigation Tabs */}
         <nav className="desktop-nav-tabs">
@@ -81,7 +83,7 @@ function App() {
               title="新增投資紀錄"
             >
               <Plus size={18} />
-              <span>記一筆投資</span>
+              <span>投資</span>
             </button>
           ) : (
             <button
@@ -90,7 +92,7 @@ function App() {
               title="新增記帳"
             >
               <Plus size={18} />
-              <span>記一筆</span>
+              <span>記帳</span>
             </button>
           )}
           <SettingsModal />
@@ -114,7 +116,7 @@ function App() {
                 <p className="prompt-title">快捷操作</p>
                 <button className="desktop-prompt-btn" onClick={() => setShowAdd(true)}>
                   <Plus size={18} />
-                  <span>點擊立即記一筆</span>
+                  <span>記帳</span>
                 </button>
               </div>
             </aside>

@@ -187,7 +187,7 @@ export default function InvestmentPage({ externalOpenAdd, onCloseExternalAdd }) 
 
         <button className="inv-action-add-btn" onClick={handleOpenAdd}>
           <Plus size={18} />
-          <span>記一筆投資</span>
+          <span>投資</span>
         </button>
       </div>
 
@@ -199,7 +199,7 @@ export default function InvestmentPage({ externalOpenAdd, onCloseExternalAdd }) 
               <div style={{ fontSize: '3rem' }}>📈</div>
               <p style={{ fontWeight: 600, marginTop: '0.75rem' }}>目前尚未持有任何股票或基金</p>
               <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                點擊上方「記一筆投資」開始記錄您的第一筆買進吧！
+                點擊上方「投資」開始記錄您的第一筆買進吧！
               </p>
             </div>
           ) : (
