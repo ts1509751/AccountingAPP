@@ -42,24 +42,25 @@ function formatDateLabel(dateStr) {
 }
 
 export default function TransactionList({ onEdit }) {
-  const { transactions, filteredTransactions, deleteTransaction } = useExpense();
+  const { transactions, filteredTransactions, deleteTransaction, categoryIcons } = useExpense();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchScope, setSearchScope] = useState('month'); // 'month' | 'all'
   const [showExportModal, setShowExportModal] = useState(false);
 
-
   const normalizedQ = normalizeQuery(searchQuery);
   const isSearching = normalizedQ.length > 0;
 
-  // Search filter matcher
+  // Search filter matcher (supports description, category, amount, date, and paymentMethod)
   const matchTx = (tx) => {
     if (!normalizedQ) return true;
     const desc = normalizeQuery(tx.description || '');
     const cat = normalizeQuery(tx.category || '');
     const amtStr = normalizeQuery(tx.amount || '');
     const dateStr = normalizeQuery(tx.date || '');
-    return desc.includes(normalizedQ) || cat.includes(normalizedQ) || amtStr.includes(normalizedQ) || dateStr.includes(normalizedQ);
+    const payStr = (tx.paymentMethod === 'credit') ? '信用卡 刷卡 credit card' : '現金 cash';
+    return desc.includes(normalizedQ) || cat.includes(normalizedQ) || amtStr.includes(normalizedQ) || dateStr.includes(normalizedQ) || payStr.includes(normalizedQ);
   };
+
 
   // Compute matches for both scopes
   const monthMatches = useMemo(
@@ -197,9 +198,14 @@ export default function TransactionList({ onEdit }) {
             <div className="tx-list">
               {txs.map(tx => (
                 <div key={tx.id} className="tx-item">
-                  <div className="tx-icon">{getCategoryIcon(tx.category)}</div>
+                  <div className="tx-icon">{getCategoryIcon(tx.category, categoryIcons)}</div>
                   <div className="tx-info">
-                    <div className="tx-name">{tx.description || tx.category}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                      <span className="tx-name">{tx.description || tx.category}</span>
+                      <span className={`tx-payment-tag ${tx.paymentMethod === 'credit' ? 'credit' : 'cash'}`}>
+                        {tx.paymentMethod === 'credit' ? '💳 信用卡' : '💵 現金'}
+                      </span>
+                    </div>
                     <div className="tx-meta">{tx.category} · {tx.date}</div>
                   </div>
                   <div className="tx-right">

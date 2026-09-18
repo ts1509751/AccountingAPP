@@ -574,16 +574,69 @@ body {
   color: var(--accent-green);
 }
 
-/* Category pills */
+/* Payment method toggle */
+.payment-method-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+  margin-bottom: 1.1rem;
+}
+
+.payment-method-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: inherit;
+}
+.payment-method-btn:hover {
+  border-color: var(--border-active);
+  color: var(--text-primary);
+}
+.payment-method-btn.active-cash {
+  background: var(--accent-green-dim);
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+}
+.payment-method-btn.active-credit {
+  background: var(--accent-blue-dim);
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+}
+
+/* Category pills with mouse drag-to-scroll */
 .category-scroll {
   display: flex;
   gap: 0.6rem;
   overflow-x: auto;
   padding-bottom: 0.75rem;
   margin-bottom: 1rem;
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
 }
-.category-scroll::-webkit-scrollbar { display: none; }
+.category-scroll:active,
+.category-scroll.is-dragging {
+  cursor: grabbing;
+}
+.category-scroll::-webkit-scrollbar {
+  height: 5px;
+}
+.category-scroll::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 9999px;
+}
 
 .cat-pill {
   display: flex;
@@ -614,6 +667,112 @@ body {
   background: transparent;
 }
 .cat-pill.add-new:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
+
+/* Custom Category with Icon Picker */
+.new-cat-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border-active);
+  border-radius: var(--radius-md);
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  animation: fadeIn 0.2s ease;
+}
+.new-cat-input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.new-cat-icon-select-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-pill);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.55rem;
+  cursor: pointer;
+  transition: var(--transition);
+  flex-shrink: 0;
+}
+.new-cat-icon-select-btn:hover {
+  border-color: var(--accent-blue);
+  background: var(--bg-card-hover);
+}
+.selected-icon-preview {
+  font-size: 1.3rem;
+  line-height: 1.2;
+}
+.icon-pick-hint {
+  font-size: 0.65rem;
+  color: var(--accent-blue);
+  font-weight: 600;
+  margin-top: 2px;
+}
+.emoji-picker-container {
+  margin-top: 0.75rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--border);
+  animation: fadeIn 0.2s ease;
+}
+.emoji-picker-title {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 0.45rem;
+}
+.emoji-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
+  gap: 0.35rem;
+  max-height: 160px;
+  overflow-y: auto;
+  padding: 0.25rem 2px;
+  scrollbar-width: thin;
+}
+.emoji-pick-btn {
+  font-size: 1.25rem;
+  background: var(--bg-pill);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+.emoji-pick-btn:hover {
+  transform: scale(1.15);
+  background: var(--accent-blue-dim);
+  border-color: var(--border-active);
+}
+.emoji-pick-btn.active {
+  background: var(--accent-blue);
+  border-color: var(--accent-blue);
+}
+
+/* Payment Method Badges in Transaction Items */
+.tx-payment-tag {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.12rem 0.45rem;
+  border-radius: 6px;
+  letter-spacing: 0.2px;
+  display: inline-flex;
+  align-items: center;
+}
+.tx-payment-tag.cash {
+  background: var(--accent-green-dim);
+  color: var(--accent-green);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+}
+.tx-payment-tag.credit {
+  background: var(--accent-blue-dim);
+  color: var(--accent-blue);
+  border: 1px solid rgba(74, 158, 255, 0.3);
+}
+
 
 /* Amount & Description row */
 .panel-input-row {

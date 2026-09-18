@@ -45,10 +45,25 @@ export const ExpenseProvider = ({ children }) => {
     localStorage.setItem('categories', JSON.stringify(categories));
   }, [categories]);
 
+  // Custom Category Icons map: { '咖啡': '☕', ... }
+  const [categoryIcons, setCategoryIcons] = useState(() => {
+    try {
+      const saved = localStorage.getItem('categoryIcons');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('categoryIcons', JSON.stringify(categoryIcons));
+  }, [categoryIcons]);
+
   // Budgets persistence (local cache)
   useEffect(() => {
     localStorage.setItem('budgets', JSON.stringify(budgets));
   }, [budgets]);
+
 
   // Auth listener
   useEffect(() => {
@@ -85,8 +100,13 @@ export const ExpenseProvider = ({ children }) => {
     const unsubBudget = onSnapshot(budgetDocRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        if (data && data.budgets) {
-          setBudgets(prev => ({ ...prev, ...data.budgets }));
+        if (data) {
+          if (data.budgets) {
+            setBudgets(prev => ({ ...prev, ...data.budgets }));
+          }
+          if (data.categoryIcons) {
+            setCategoryIcons(prev => ({ ...prev, ...data.categoryIcons }));
+          }
         }
       }
     });
@@ -193,7 +213,13 @@ export const ExpenseProvider = ({ children }) => {
 
   const addTransaction = async (tx) => {
     if (!user) return;
-    await addDoc(collection(db, 'transactions'), { ...tx, uid: user.uid, createdAt: Date.now() });
+    const paymentMethod = tx.paymentMethod || 'cash';
+    await addDoc(collection(db, 'transactions'), {
+      ...tx,
+      paymentMethod,
+      uid: user.uid,
+      createdAt: Date.now(),
+    });
   };
 
   const updateTransaction = async (id, data) => {
@@ -204,8 +230,23 @@ export const ExpenseProvider = ({ children }) => {
     await deleteDoc(doc(db, 'transactions', id));
   };
 
-  const addCategory = (cat) => {
-    if (cat && !categories.includes(cat)) setCategories(prev => [...prev, cat]);
+  const addCategory = async (cat, icon = '📌') => {
+    if (!cat) return;
+    const trimmed = cat.trim();
+    if (!categories.includes(trimmed)) {
+      setCategories(prev => [...prev, trimmed]);
+    }
+    if (icon) {
+      setCategoryIcons(prev => ({ ...prev, [trimmed]: icon }));
+      if (user) {
+        try {
+          const budgetDocRef = doc(db, 'user_budgets', user.uid);
+          await setDoc(budgetDocRef, { categoryIcons: { [trimmed]: icon } }, { merge: true });
+        } catch (err) {
+          console.error('Failed to sync category icon to Firebase:', err);
+        }
+      }
+    }
   };
 
   const value = {
@@ -213,13 +254,14 @@ export const ExpenseProvider = ({ children }) => {
     theme, toggleTheme,
     transactions, filteredTransactions,
     addTransaction, updateTransaction, deleteTransaction,
-    categories, addCategory,
+    categories, addCategory, categoryIcons,
     income, expense, balance,
     viewYear, viewMonth, setViewYear, setViewMonth, prevMonth, nextMonth, prevYear, nextYear, monthStr,
     // Budget & Analysis additions
     budgets, setBudget, currentBudget, budgetRemaining, budgetUsedPercent,
     yearlyIncome, yearlyExpense, yearlyBalance, yearlyMonthlyBreakdown, allYearsSummary,
   };
+
 
   return <ExpenseContext.Provider value={value}>{children}</ExpenseContext.Provider>;
 };

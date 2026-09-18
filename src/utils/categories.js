@@ -14,8 +14,23 @@ export const CATEGORY_ICONS = {
   '水電': '💡',
 };
 
-export const getCategoryIcon = (category) => {
+// Popular emoji icons for custom category creation
+export const POPULAR_ICONS = [
+  '🍜', '🍲', '☕', '🧋', '🍕', '🍔', '🍰', '🍱', '🥩', '🍎', '🍻', '🍞',
+  '🚗', '🛵', '🚌', '🚇', '🚄', '✈️', '⛽', '🚲', '🚖', '🎫', '🚢',
+  '🏠', '💡', '🛒', '🛍️', '📦', '🛋️', '📱', '💻', '📶', '🔑', '🚰', '🧼',
+  '🎮', '🎬', '🎤', '🎧', '📚', '🎨', '⚽', '🏋️', '🏊', '🏕️', '🎟️', '🎯',
+  '💊', '🏥', '🩺', '🩹', '🦷', '💇', '🧴', '💆',
+  '🐱', '🐶', '🐾', '🪴', '👶', '🎁', '💐', '💍',
+  '💰', '💳', '💵', '🪙', '📈', '💼', '🧾', '🧧', '🏷️', '📌'
+];
+
+export const getCategoryIcon = (category, customIcons = {}) => {
+  if (customIcons && customIcons[category]) {
+    return customIcons[category];
+  }
   return CATEGORY_ICONS[category] || '📌';
 };
 
 export const DEFAULT_CATEGORIES = Object.keys(CATEGORY_ICONS);
+

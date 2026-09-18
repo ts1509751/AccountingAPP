@@ -30,22 +30,25 @@ export function exportExpenseToExcel({
     if (t.type === 'expense') totalExpense += amt;
     else totalIncome += amt;
 
+    const payMethod = t.paymentMethod === 'credit' ? '信用卡' : '現金';
+
     return [
       t.date,
       t.type === 'expense' ? '支出' : '收入',
       t.category || '未分類',
+      payMethod,
       t.description || '',
       amt,
     ];
   });
 
   const txData = [
-    ['日期', '收支類型', '類別', '說明 / 備註', '金額 (NT$)'],
+    ['日期', '收支類型', '類別', '付款方式', '說明 / 備註', '金額 (NT$)'],
     ...txRows,
     [],
-    ['', '', '', '總支出合計', totalExpense],
-    ['', '', '', '總收入合計', totalIncome],
-    ['', '', '', '期間淨結餘', totalIncome - totalExpense],
+    ['', '', '', '', '總支出合計', totalExpense],
+    ['', '', '', '', '總收入合計', totalIncome],
+    ['', '', '', '', '期間淨結餘', totalIncome - totalExpense],
   ];
 
   const wsTx = XLSX.utils.aoa_to_sheet(txData);
@@ -53,10 +56,12 @@ export function exportExpenseToExcel({
     { wch: 14 }, // 日期
     { wch: 10 }, // 類型
     { wch: 14 }, // 分類
+    { wch: 12 }, // 付款方式
     { wch: 30 }, // 備註
     { wch: 14 }, // 金額
   ];
   XLSX.utils.book_append_sheet(wb, wsTx, '記帳收支明細');
+
 
   // ──────────────────────────────────────────────────────────
   // Sheet 2: 收支月報彙整

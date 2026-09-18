@@ -1,13 +1,23 @@
 import { useState, useEffect } from 'react';
 import { useExpense } from '../context/ExpenseContext';
 import { getCategoryIcon } from '../utils/categories';
+import { useDragScroll } from '../hooks/useDragScroll';
+import { CreditCard, Banknote } from 'lucide-react';
 
 export default function EditModal({ transaction, onClose }) {
-  const { updateTransaction, categories } = useExpense();
-  const [form, setForm] = useState({ ...transaction });
+  const { updateTransaction, categories, categoryIcons } = useExpense();
+  const [form, setForm] = useState({
+    ...transaction,
+    paymentMethod: transaction?.paymentMethod || 'cash',
+  });
+
+  const { dragProps, isDragging, hasMoved } = useDragScroll();
 
   useEffect(() => {
-    setForm({ ...transaction });
+    setForm({
+      ...transaction,
+      paymentMethod: transaction?.paymentMethod || 'cash',
+    });
   }, [transaction]);
 
   const handleSave = async () => {
@@ -18,6 +28,7 @@ export default function EditModal({ transaction, onClose }) {
       category: form.category,
       description: form.description,
       date: form.date,
+      paymentMethod: form.paymentMethod || 'cash',
     });
     onClose();
   };
@@ -33,27 +44,59 @@ export default function EditModal({ transaction, onClose }) {
           <label className="modal-label">類型</label>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
             <button
+              type="button"
               className={`type-btn ${form.type === 'expense' ? 'active-expense' : ''}`}
               onClick={() => setForm(f => ({ ...f, type: 'expense' }))}
             >💸 支出</button>
             <button
+              type="button"
               className={`type-btn ${form.type === 'income' ? 'active-income' : ''}`}
               onClick={() => setForm(f => ({ ...f, type: 'income' }))}
             >💵 收入</button>
           </div>
         </div>
 
-        {/* Category pills */}
+        {/* Payment Method */}
+        <div className="modal-field">
+          <label className="modal-label">付款方式</label>
+          <div className="payment-method-row" style={{ margin: 0 }}>
+            <button
+              type="button"
+              className={`payment-method-btn ${form.paymentMethod === 'cash' ? 'active-cash' : ''}`}
+              onClick={() => setForm(f => ({ ...f, paymentMethod: 'cash' }))}
+            >
+              <Banknote size={15} />
+              <span>現金 (Cash)</span>
+            </button>
+            <button
+              type="button"
+              className={`payment-method-btn ${form.paymentMethod === 'credit' ? 'active-credit' : ''}`}
+              onClick={() => setForm(f => ({ ...f, paymentMethod: 'credit' }))}
+            >
+              <CreditCard size={15} />
+              <span>信用卡 (Card)</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Category pills with drag-to-scroll */}
         <div className="modal-field">
           <label className="modal-label">分類</label>
-          <div className="category-scroll">
+          <div
+            className={`category-scroll ${isDragging ? 'is-dragging' : ''}`}
+            {...dragProps}
+            title="可使用滑鼠按住左右拖曳或滾動滾輪"
+          >
             {categories.map(cat => (
               <button
                 key={cat}
+                type="button"
                 className={`cat-pill ${form.category === cat ? 'active' : ''}`}
-                onClick={() => setForm(f => ({ ...f, category: cat }))}
+                onClick={() => {
+                  if (!hasMoved()) setForm(f => ({ ...f, category: cat }));
+                }}
               >
-                <span className="cat-icon">{getCategoryIcon(cat)}</span>
+                <span className="cat-icon">{getCategoryIcon(cat, categoryIcons)}</span>
                 <span className="cat-name">{cat}</span>
               </button>
             ))}
@@ -96,10 +139,11 @@ export default function EditModal({ transaction, onClose }) {
         </div>
 
         <div className="modal-btn-row">
-          <button className="modal-btn cancel" onClick={onClose}>取消</button>
-          <button className="modal-btn save" onClick={handleSave}>儲存</button>
+          <button type="button" className="modal-btn cancel" onClick={onClose}>取消</button>
+          <button type="button" className="modal-btn save" onClick={handleSave}>儲存</button>
         </div>
       </div>
     </div>
   );
 }
+
