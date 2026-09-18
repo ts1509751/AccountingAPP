@@ -1,7 +1,9 @@
 import { useState, useMemo } from 'react';
 import { useInvestment } from '../../context/InvestmentContext';
 import InvestmentModal from './InvestmentModal';
-import { Plus, TrendingUp, TrendingDown, DollarSign, Edit2, Trash2, Layers, History, ArrowDownRight, ArrowUpRight, Search, X, ChevronRight } from 'lucide-react';
+import InvestmentAccountModal from './InvestmentAccountModal';
+import DcaPlanModal from './DcaPlanModal';
+import { Plus, TrendingUp, TrendingDown, DollarSign, Edit2, Trash2, Layers, History, ArrowDownRight, ArrowUpRight, Search, X, ChevronRight, Briefcase, Calendar } from 'lucide-react';
 
 const formatMoney = (n) =>
   new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', minimumFractionDigits: 0 }).format(n);
@@ -23,17 +25,27 @@ function normalizeQuery(str) {
 export default function InvestmentPage({ externalOpenAdd, onCloseExternalAdd }) {
   const {
     investments,
+    activeInvestments,
     loading,
     holdings,
     totalCostBasis,
     totalRealizedPnL,
     deleteInvestment,
+    investmentAccounts,
+    selectedAccountId,
+    setSelectedAccountId,
+    accountStatsMap,
+    dcaPlans,
   } = useInvestment();
 
   const [activeTab, setActiveTab] = useState('holdings'); // 'holdings' | 'history'
   const [showModal, setShowModal] = useState(false);
   const [editingTx, setEditingTx] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Submodals
+  const [showAccountModal, setShowAccountModal] = useState(false);
+  const [showDcaModal, setShowDcaModal] = useState(false);
 
   const isModalOpen = showModal || Boolean(externalOpenAdd);
 
@@ -53,6 +65,20 @@ export default function InvestmentPage({ externalOpenAdd, onCloseExternalAdd }) 
     setShowModal(true);
   };
 
+  // Quick DCA buy action from DCA plan modal
+  const handleQuickDcaBuy = (plan) => {
+    setEditingTx({
+      action: 'buy',
+      assetType: plan.assetType || 'stock',
+      symbol: plan.symbol,
+      accountId: plan.accountId,
+      accountName: plan.accountName,
+      isDCA: true,
+      notes: `定期定額約定扣款 (約定 NT$${plan.fixedAmount})`,
+    });
+    setShowModal(true);
+  };
+
   // Switch to history tab and filter by stock symbol
   const handleViewStockHistory = (sym) => {
     setSearchQuery(sym);
@@ -63,25 +89,27 @@ export default function InvestmentPage({ externalOpenAdd, onCloseExternalAdd }) 
   const openHoldings = holdings.filter(h => h.currentShares > 0);
   const closedHoldings = holdings.filter(h => h.currentShares === 0 && (h.sellCount > 0));
 
-  // Extract all unique stock symbols from investments
+  // Extract all unique stock symbols from active investments
   const allSymbols = useMemo(() => {
     const set = new Set();
-    investments.forEach(tx => {
+    activeInvestments.forEach(tx => {
       if (tx.symbol) set.add(tx.symbol);
     });
     return Array.from(set);
-  }, [investments]);
+  }, [activeInvestments]);
 
-  // Filter investments by search query (symbol or notes)
+  // Filter investments by search query (symbol, notes, accountName, or dca)
   const normalizedSearch = normalizeQuery(searchQuery);
   const filteredInvestments = useMemo(() => {
-    if (!normalizedSearch) return investments;
-    return investments.filter(tx => {
+    if (!normalizedSearch) return activeInvestments;
+    return activeInvestments.filter(tx => {
       const sym = normalizeQuery(tx.symbol || '');
       const notes = normalizeQuery(tx.notes || '');
-      return sym.includes(normalizedSearch) || notes.includes(normalizedSearch);
+      const accName = normalizeQuery(tx.accountName || '');
+      const dcaTag = tx.isDCA ? '定期定額 dca' : '單筆';
+      return sym.includes(normalizedSearch) || notes.includes(normalizedSearch) || accName.includes(normalizedSearch) || dcaTag.includes(normalizedSearch);
     });
-  }, [investments, normalizedSearch]);
+  }, [activeInvestments, normalizedSearch]);
 
   // Compute breakdown metrics for queried stock
   const summaryStats = useMemo(() => {
@@ -141,12 +169,71 @@ export default function InvestmentPage({ externalOpenAdd, onCloseExternalAdd }) 
 
   return (
     <div className="investment-page-container">
+      {/* ── Sub-Account Filter Bar & DCA Tool Buttons ── */}
+      <div className="inv-subaccount-bar">
+        <div className="inv-subaccount-scroll">
+          <button
+            type="button"
+            className={`inv-account-pill ${selectedAccountId === 'all' ? 'active' : ''}`}
+            onClick={() => setSelectedAccountId('all')}
+          >
+            <span className="inv-pill-name">全部帳戶</span>
+            <span className="inv-pill-count">({investments.length})</span>
+          </button>
+
+          {investmentAccounts.map(acc => {
+            const isSelected = selectedAccountId === acc.id;
+            const stats = accountStatsMap[acc.id] || { txCount: 0 };
+            return (
+              <button
+                key={acc.id}
+                type="button"
+                className={`inv-account-pill ${isSelected ? 'active' : ''}`}
+                style={{ '--acc-color': acc.color || '#2563eb' }}
+                onClick={() => setSelectedAccountId(acc.id)}
+              >
+                <span className="inv-pill-dot" style={{ backgroundColor: acc.color || '#2563eb' }} />
+                <span className="inv-pill-name">{acc.name}</span>
+                <span className="inv-pill-count">({stats.txCount})</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="inv-subaccount-actions">
+          <button
+            type="button"
+            className="inv-top-tool-btn"
+            onClick={() => setShowDcaModal(true)}
+            title="定期定額存股計劃"
+          >
+            <Calendar size={14} />
+            <span className="tool-btn-text">定期定額</span>
+            {dcaPlans.filter(p => p.active !== false).length > 0 && (
+              <span className="tool-btn-badge">{dcaPlans.filter(p => p.active !== false).length}</span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            className="inv-top-tool-btn"
+            onClick={() => setShowAccountModal(true)}
+            title="管理投資分帳戶"
+          >
+            <Briefcase size={14} />
+            <span className="tool-btn-text">分帳戶管理</span>
+          </button>
+        </div>
+      </div>
+
       {/* ── Top Portfolio Overview Cards ── */}
       <div className="investment-hero-grid">
         <div className="desktop-card investment-hero-card">
           <div className="inv-hero-header">
             <span className="inv-hero-label">目前持股總成本</span>
-            <span className="inv-badge-blue">庫存本金</span>
+            <span className="inv-badge-blue">
+              {selectedAccountId === 'all' ? '全部庫存' : investmentAccounts.find(a => a.id === selectedAccountId)?.name || '分帳戶庫存'}
+            </span>
           </div>
           <div className="inv-hero-val">{formatMoney(totalCostBasis)}</div>
           <div className="inv-hero-sub">共持有 {openHoldings.length} 檔標的</div>
@@ -181,7 +268,7 @@ export default function InvestmentPage({ externalOpenAdd, onCloseExternalAdd }) 
             onClick={() => setActiveTab('history')}
           >
             <History size={15} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />
-            交易明細 ({investments.length})
+            交易明細 ({activeInvestments.length})
           </button>
         </div>
 
@@ -209,9 +296,16 @@ export default function InvestmentPage({ externalOpenAdd, onCloseExternalAdd }) 
                   <div className="holding-card-top">
                     <div>
                       <div className="holding-symbol">{h.symbol}</div>
-                      <span className="holding-type-tag">
-                        {h.assetType === 'etf' ? '📊 ETF' : h.assetType === 'fund' ? '🌱 基金' : '📈 股票'}
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.2rem', flexWrap: 'wrap' }}>
+                        <span className="holding-type-tag">
+                          {h.assetType === 'etf' ? '📊 ETF' : h.assetType === 'fund' ? '🌱 基金' : '📈 股票'}
+                        </span>
+                        {h.dcaCount > 0 && (
+                          <span className="holding-dca-tag">
+                            📅 定期定額 {h.dcaCount} 筆
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <div className="holding-shares-count">{formatRaw(h.currentShares)} <span style={{ fontSize: '0.8rem', fontWeight: 500 }}>股</span></div>
@@ -420,10 +514,18 @@ export default function InvestmentPage({ externalOpenAdd, onCloseExternalAdd }) 
                   </div>
 
                   <div className="tx-info">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
                       <span className="tx-name">{tx.symbol}</span>
                       <span className={tx.action === 'buy' ? 'inv-badge-green' : 'inv-badge-red'}>
                         {tx.action === 'buy' ? '買進' : '賣出'}
+                      </span>
+                      {tx.isDCA && (
+                        <span className="inv-badge-dca">
+                          📅 定期定額
+                        </span>
+                      )}
+                      <span className="inv-account-tag">
+                        💼 {tx.accountName || '主帳戶'}
                       </span>
                     </div>
                     <div className="tx-meta">
@@ -468,6 +570,19 @@ export default function InvestmentPage({ externalOpenAdd, onCloseExternalAdd }) 
           onClose={handleClose}
         />
       )}
+
+      {/* Sub-account Management Modal */}
+      <InvestmentAccountModal
+        isOpen={showAccountModal}
+        onClose={() => setShowAccountModal(false)}
+      />
+
+      {/* DCA Plan Modal */}
+      <DcaPlanModal
+        isOpen={showDcaModal}
+        onClose={() => setShowDcaModal(false)}
+        onQuickDcaBuy={handleQuickDcaBuy}
+      />
     </div>
   );
 }

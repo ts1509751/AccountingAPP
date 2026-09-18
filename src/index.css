@@ -3230,3 +3230,147 @@ input:checked + .toggle-slider::before {
   border: 1px dashed var(--border);
   border-radius: var(--radius-md);
 }
+
+/* =====================================================
+   INVESTMENT SUB-ACCOUNTS & DCA PLAN STYLES
+   ===================================================== */
+.inv-subaccount-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1.15rem;
+  flex-wrap: wrap;
+}
+
+.inv-subaccount-scroll {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.2rem;
+  scrollbar-width: thin;
+  flex: 1;
+  min-width: 220px;
+}
+
+.inv-account-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  border: 1.5px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+  font-family: inherit;
+}
+.inv-account-pill:hover {
+  border-color: var(--border-active);
+  color: var(--text-primary);
+}
+.inv-account-pill.active {
+  background: var(--accent-blue-dim);
+  border-color: var(--acc-color, var(--accent-blue));
+  color: var(--text-primary);
+}
+
+.inv-pill-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.inv-pill-name {
+  font-size: 0.82rem;
+}
+
+.inv-pill-count {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.inv-subaccount-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.inv-top-tool-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: inherit;
+  white-space: nowrap;
+}
+.inv-top-tool-btn:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+  border-color: var(--border-active);
+}
+
+.tool-btn-badge {
+  background: var(--accent-green);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  line-height: 1.2;
+}
+
+@media (max-width: 580px) {
+  .tool-btn-text {
+    display: none;
+  }
+  .inv-top-tool-btn {
+    padding: 0.45rem 0.6rem;
+  }
+}
+
+/* Badges for DCA and Sub-accounts on Transaction & Holding cards */
+.inv-badge-dca {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(139, 92, 246, 0.15);
+  color: #8b5cf6;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.inv-account-tag {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: var(--bg-input);
+  padding: 0.15rem 0.45rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.holding-dca-tag {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(139, 92, 246, 0.12);
+  color: #8b5cf6;
+  border: 1px solid rgba(139, 92, 246, 0.25);
+}
+

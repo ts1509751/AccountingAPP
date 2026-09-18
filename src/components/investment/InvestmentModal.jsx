@@ -4,12 +4,14 @@ import { X, Calculator, ArrowDownRight, ArrowUpRight, Sparkles } from 'lucide-re
 import { findStockByCode, searchStocks } from '../../utils/stockDatabase';
 
 export default function InvestmentModal({ transaction, onClose }) {
-  const { addInvestment, updateInvestment } = useInvestment();
+  const { addInvestment, updateInvestment, investmentAccounts } = useInvestment();
 
   const isEditing = Boolean(transaction);
   const today = new Date().toISOString().split('T')[0];
 
   const [action, setAction] = useState(transaction?.action || 'buy');
+  const [isDCA, setIsDCA] = useState(Boolean(transaction?.isDCA));
+  const [accountId, setAccountId] = useState(transaction?.accountId || (investmentAccounts[0]?.id || 'default'));
   const [assetType, setAssetType] = useState(transaction?.assetType || 'stock');
   const [symbol, setSymbol] = useState(transaction?.symbol || '');
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -123,10 +125,16 @@ export default function InvestmentModal({ transaction, onClose }) {
       ? `${matched.code} ${matched.name}`
       : symbol.trim();
 
+    const selectedAcc = investmentAccounts.find(a => a.id === accountId);
+    const accountName = selectedAcc?.name || '預設主帳戶';
+
     const data = {
       action,
       assetType,
       symbol: finalSymbol,
+      accountId,
+      accountName,
+      isDCA: action === 'buy' ? isDCA : false,
       date,
       price: numPrice,
       shares: numShares,
@@ -210,6 +218,55 @@ export default function InvestmentModal({ transaction, onClose }) {
                 <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{t.label}</span>
               </button>
             ))}
+          </div>
+
+          {/* Sub-account selection & DCA Toggle */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem', marginBottom: '1rem' }}>
+            {/* Account Selector */}
+            <div className="modal-field" style={{ margin: 0 }}>
+              <label className="modal-label">所屬投資分帳戶</label>
+              <select
+                className="modal-input"
+                value={accountId}
+                onChange={e => setAccountId(e.target.value)}
+                style={{ padding: '0.65rem 0.75rem', fontSize: '0.88rem' }}
+              >
+                {investmentAccounts.map(acc => (
+                  <option key={acc.id} value={acc.id}>
+                    💼 {acc.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Trade Method: 單筆 vs 定期定額 (only for buy) */}
+            <div className="modal-field" style={{ margin: 0 }}>
+              <label className="modal-label">交易類型</label>
+              {action === 'buy' ? (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.35rem' }}>
+                  <button
+                    type="button"
+                    className={`payment-method-btn ${!isDCA ? 'active-cash' : ''}`}
+                    style={{ padding: '0.65rem 0.2rem', fontSize: '0.8rem' }}
+                    onClick={() => setIsDCA(false)}
+                  >
+                    🛒 單筆
+                  </button>
+                  <button
+                    type="button"
+                    className={`payment-method-btn ${isDCA ? 'active-credit' : ''}`}
+                    style={{ padding: '0.65rem 0.2rem', fontSize: '0.8rem' }}
+                    onClick={() => setIsDCA(true)}
+                  >
+                    📅 定期定額
+                  </button>
+                </div>
+              ) : (
+                <div style={{ padding: '0.65rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-sm)', fontSize: '0.82rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+                  賣出結算
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Symbol / Name */}
