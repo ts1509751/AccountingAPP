@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Settings, Sun, Moon, LogOut } from 'lucide-react';
+import { Settings, Sun, Moon, LogOut, FileSpreadsheet } from 'lucide-react';
 import { useExpense } from '../context/ExpenseContext';
+import ExportModal from './ExportModal';
 
 export default function SettingsModal() {
   const { theme, toggleTheme, logout, user } = useExpense();
   const [open, setOpen] = useState(false);
+  const [showExport, setShowExport] = useState(false);
 
   return (
     <>
@@ -34,6 +36,12 @@ export default function SettingsModal() {
               </label>
             </button>
 
+            {/* Export Excel */}
+            <button className="settings-item" onClick={() => { setShowExport(true); setOpen(false); }}>
+              <FileSpreadsheet size={18} style={{ color: 'var(--accent-green)' }} />
+              匯出 Excel 報表 (.xlsx)
+            </button>
+
             <div className="settings-divider" />
 
             {/* Logout */}
@@ -44,6 +52,10 @@ export default function SettingsModal() {
           </div>
         </>
       )}
+
+      {/* Export Modal */}
+      <ExportModal isOpen={showExport} onClose={() => setShowExport(false)} />
     </>
   );
 }
+

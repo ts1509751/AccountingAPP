@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useExpense } from '../context/ExpenseContext';
 import { getCategoryIcon } from '../utils/categories';
-import { Trash2, Edit2, Search, X } from 'lucide-react';
+import { Trash2, Edit2, Search, X, FileSpreadsheet } from 'lucide-react';
+import ExportModal from './ExportModal';
 
 const formatMoney = (n) =>
   new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', minimumFractionDigits: 0 }).format(n);
@@ -44,6 +45,8 @@ export default function TransactionList({ onEdit }) {
   const { transactions, filteredTransactions, deleteTransaction } = useExpense();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchScope, setSearchScope] = useState('month'); // 'month' | 'all'
+  const [showExportModal, setShowExportModal] = useState(false);
+
 
   const normalizedQ = normalizeQuery(searchQuery);
   const isSearching = normalizedQ.length > 0;
@@ -90,27 +93,39 @@ export default function TransactionList({ onEdit }) {
 
   return (
     <div className="tx-section">
-      {/* ── Search Bar ── */}
+      {/* ── Search Bar & Export Button ── */}
       <div className="list-search-container">
-        <div className="list-search-input-wrapper">
-          <Search size={16} className="list-search-icon" />
-          <input
-            type="text"
-            className="list-search-input"
-            placeholder="搜尋金額或名稱 (例如: 150 或 早餐)"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              className="list-search-clear-btn"
-              onClick={() => setSearchQuery('')}
-              aria-label="清除搜尋"
-            >
-              <X size={15} />
-            </button>
-          )}
+        <div className="list-search-header-row">
+          <div className="list-search-input-wrapper">
+            <Search size={16} className="list-search-icon" />
+            <input
+              type="text"
+              className="list-search-input"
+              placeholder="搜尋金額或名稱 (例如: 150 或 早餐)"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                className="list-search-clear-btn"
+                onClick={() => setSearchQuery('')}
+                aria-label="清除搜尋"
+              >
+                <X size={15} />
+              </button>
+            )}
+          </div>
+
+          <button
+            type="button"
+            className="export-excel-action-btn"
+            onClick={() => setShowExportModal(true)}
+            title="匯出 Excel 彙整報表"
+          >
+            <FileSpreadsheet size={16} />
+            <span className="export-excel-btn-text">匯出 Excel</span>
+          </button>
         </div>
 
         {/* Search scope switch & stats */}
@@ -206,7 +221,14 @@ export default function TransactionList({ onEdit }) {
           </div>
         ))
       )}
+
+      {/* ── Excel Export Modal ── */}
+      <ExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+      />
     </div>
   );
 }
+
 
