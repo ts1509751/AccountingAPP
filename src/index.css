@@ -1,9 +1,12 @@
 /* =====================================================
    GLOBAL RESET & BASE VARIABLES
    ===================================================== */
+@import url('https://fontsapi.zeoseven.com/53/main/result.css');
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 :root {
+  --font-base: 'ToneOZ-Tsuipita-TC', '曉聲通秋茄體', '曉聲通秋茄', 'ToneOZ-Tsuipita', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang TC", "Microsoft JhengHei", sans-serif;
+
   /* Dark theme (default) */
   --bg-primary: #0e0e12;
   --bg-secondary: #161622;
@@ -68,14 +71,18 @@ html, body, #root {
   width: 100%;
 }
 
+body, button, input, select, textarea {
+  font-family: var(--font-base);
+}
+
 body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   background: var(--bg-primary);
   color: var(--text-primary);
   transition: background 0.3s, color 0.3s;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
 }
+
 
 /* =====================================================
    RESPONSIVE SHELL
