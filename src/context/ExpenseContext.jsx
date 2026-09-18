@@ -1,7 +1,7 @@
-import { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
 import { auth, db } from '../firebase/config';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc, doc, setDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc, doc, setDoc, writeBatch, getDocs } from 'firebase/firestore';
 import { DEFAULT_CATEGORIES } from '../utils/categories';
 
 const ExpenseContext = createContext();
@@ -14,9 +14,45 @@ export const ExpenseProvider = ({ children }) => {
 
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
   const [transactions, setTransactions] = useState([]);
+  
+  // Categories (synced with Firestore)
   const [categories, setCategories] = useState(() => {
-    const saved = localStorage.getItem('categories');
-    return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES;
+    try {
+      const saved = localStorage.getItem('categories');
+      return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES;
+    } catch {
+      return DEFAULT_CATEGORIES;
+    }
+  });
+
+  // Custom Category Icons map: { '咖啡': '☕', ... }
+  const [categoryIcons, setCategoryIcons] = useState(() => {
+    try {
+      const saved = localStorage.getItem('categoryIcons');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  // Credit Cards: [{ id, name, bank, limit, color }]
+  const [creditCards, setCreditCards] = useState(() => {
+    try {
+      const saved = localStorage.getItem('creditCards');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Recurring Expenses: [{ id, name, amount, type, category, paymentMethod, cardId, dayOfMonth, active, lastRecordedMonth }]
+  const [recurringExpenses, setRecurringExpenses] = useState(() => {
+    try {
+      const saved = localStorage.getItem('recurringExpenses');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
   });
 
   // Monthly budgets map: { '2026-09': 20000, ... }
@@ -40,30 +76,26 @@ export const ExpenseProvider = ({ children }) => {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  // Categories persistence
+  // Local storage caching
   useEffect(() => {
     localStorage.setItem('categories', JSON.stringify(categories));
   }, [categories]);
-
-  // Custom Category Icons map: { '咖啡': '☕', ... }
-  const [categoryIcons, setCategoryIcons] = useState(() => {
-    try {
-      const saved = localStorage.getItem('categoryIcons');
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
-    }
-  });
 
   useEffect(() => {
     localStorage.setItem('categoryIcons', JSON.stringify(categoryIcons));
   }, [categoryIcons]);
 
-  // Budgets persistence (local cache)
+  useEffect(() => {
+    localStorage.setItem('creditCards', JSON.stringify(creditCards));
+  }, [creditCards]);
+
+  useEffect(() => {
+    localStorage.setItem('recurringExpenses', JSON.stringify(recurringExpenses));
+  }, [recurringExpenses]);
+
   useEffect(() => {
     localStorage.setItem('budgets', JSON.stringify(budgets));
   }, [budgets]);
-
 
   // Auth listener
   useEffect(() => {
@@ -74,7 +106,7 @@ export const ExpenseProvider = ({ children }) => {
     return unsub;
   }, []);
 
-  // Firestore transactions & budgets listener
+  // Firestore transactions & user settings (budgets, categories, cards, recurring) listener
   useEffect(() => {
     if (!user) {
       setTransactions([]);
@@ -95,19 +127,36 @@ export const ExpenseProvider = ({ children }) => {
       setDataLoading(false);
     });
 
-    // Budgets listener
+    // User settings (budgets, categories, icons, cards, recurring) listener
     const budgetDocRef = doc(db, 'user_budgets', user.uid);
     const unsubBudget = onSnapshot(budgetDocRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         if (data) {
+          if (Array.isArray(data.categories) && data.categories.length > 0) {
+            setCategories(data.categories);
+          }
+          if (data.categoryIcons) {
+            setCategoryIcons(data.categoryIcons);
+          }
           if (data.budgets) {
             setBudgets(prev => ({ ...prev, ...data.budgets }));
           }
-          if (data.categoryIcons) {
-            setCategoryIcons(prev => ({ ...prev, ...data.categoryIcons }));
+          if (Array.isArray(data.creditCards)) {
+            setCreditCards(data.creditCards);
+          }
+          if (Array.isArray(data.recurringExpenses)) {
+            setRecurringExpenses(data.recurringExpenses);
           }
         }
+      } else {
+        // Initialize Firestore with current default categories if not existing
+        setDoc(budgetDocRef, {
+          categories: categories.length ? categories : DEFAULT_CATEGORIES,
+          categoryIcons: categoryIcons,
+          creditCards: [],
+          recurringExpenses: [],
+        }, { merge: true }).catch(err => console.error('Failed to init user settings:', err));
       }
     });
 
@@ -233,35 +282,345 @@ export const ExpenseProvider = ({ children }) => {
   const addCategory = async (cat, icon = '📌') => {
     if (!cat) return;
     const trimmed = cat.trim();
-    if (!categories.includes(trimmed)) {
-      setCategories(prev => [...prev, trimmed]);
-    }
-    if (icon) {
-      setCategoryIcons(prev => ({ ...prev, [trimmed]: icon }));
-      if (user) {
-        try {
-          const budgetDocRef = doc(db, 'user_budgets', user.uid);
-          await setDoc(budgetDocRef, { categoryIcons: { [trimmed]: icon } }, { merge: true });
-        } catch (err) {
-          console.error('Failed to sync category icon to Firebase:', err);
-        }
+    const updatedCats = categories.includes(trimmed) ? categories : [...categories, trimmed];
+    const updatedIcons = { ...categoryIcons, [trimmed]: icon || '📌' };
+
+    setCategories(updatedCats);
+    setCategoryIcons(updatedIcons);
+
+    if (user) {
+      try {
+        const budgetDocRef = doc(db, 'user_budgets', user.uid);
+        await setDoc(budgetDocRef, {
+          categories: updatedCats,
+          categoryIcons: updatedIcons,
+        }, { merge: true });
+      } catch (err) {
+        console.error('Failed to sync category to Firebase:', err);
       }
     }
   };
+
+  const updateCategory = async (oldName, newName, newIcon) => {
+    const trimmedOld = oldName.trim();
+    const trimmedNew = newName.trim();
+    if (!trimmedNew) return;
+
+    let updatedCats = categories.map(c => c === trimmedOld ? trimmedNew : c);
+    // Remove duplicates if renaming to existing
+    updatedCats = Array.from(new Set(updatedCats));
+
+    const updatedIcons = { ...categoryIcons };
+    if (trimmedOld !== trimmedNew) {
+      delete updatedIcons[trimmedOld];
+    }
+    updatedIcons[trimmedNew] = newIcon || '📌';
+
+    setCategories(updatedCats);
+    setCategoryIcons(updatedIcons);
+
+    if (user) {
+      try {
+        const budgetDocRef = doc(db, 'user_budgets', user.uid);
+        await setDoc(budgetDocRef, {
+          categories: updatedCats,
+          categoryIcons: updatedIcons,
+        }, { merge: true });
+
+        // If category was renamed, update all associated transactions
+        if (trimmedOld !== trimmedNew) {
+          const q = query(
+            collection(db, 'transactions'),
+            where('uid', '==', user.uid),
+            where('category', '==', trimmedOld)
+          );
+          const snap = await getDocs(q);
+          if (!snap.empty) {
+            const batch = writeBatch(db);
+            snap.docs.forEach(d => {
+              batch.update(d.ref, { category: trimmedNew });
+            });
+            await batch.commit();
+          }
+        }
+      } catch (err) {
+        console.error('Failed to update category in Firebase:', err);
+      }
+    }
+  };
+
+  const deleteCategory = async (catName) => {
+    const updatedCats = categories.filter(c => c !== catName);
+    const updatedIcons = { ...categoryIcons };
+    delete updatedIcons[catName];
+
+    setCategories(updatedCats);
+    setCategoryIcons(updatedIcons);
+
+    if (user) {
+      try {
+        const budgetDocRef = doc(db, 'user_budgets', user.uid);
+        await setDoc(budgetDocRef, {
+          categories: updatedCats,
+          categoryIcons: updatedIcons,
+        }, { merge: true });
+      } catch (err) {
+        console.error('Failed to delete category in Firebase:', err);
+      }
+    }
+  };
+
+  // ── Credit Card Management ──
+  const addCreditCard = async ({ name, bank, limit, color }) => {
+    const newCard = {
+      id: 'card_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+      name: name.trim(),
+      bank: (bank || '').trim(),
+      limit: Number(limit) || 0,
+      color: color || '#3b82f6',
+    };
+    const updated = [...creditCards, newCard];
+    setCreditCards(updated);
+
+    if (user) {
+      try {
+        await setDoc(doc(db, 'user_budgets', user.uid), { creditCards: updated }, { merge: true });
+      } catch (err) {
+        console.error('Failed to add credit card:', err);
+      }
+    }
+    return newCard;
+  };
+
+  const updateCreditCard = async (id, data) => {
+    const updated = creditCards.map(c => c.id === id ? { ...c, ...data, limit: Number(data.limit) || c.limit } : c);
+    setCreditCards(updated);
+
+    if (user) {
+      try {
+        await setDoc(doc(db, 'user_budgets', user.uid), { creditCards: updated }, { merge: true });
+      } catch (err) {
+        console.error('Failed to update credit card:', err);
+      }
+    }
+  };
+
+  const deleteCreditCard = async (id) => {
+    const updated = creditCards.filter(c => c.id !== id);
+    setCreditCards(updated);
+
+    if (user) {
+      try {
+        await setDoc(doc(db, 'user_budgets', user.uid), { creditCards: updated }, { merge: true });
+      } catch (err) {
+        console.error('Failed to delete credit card:', err);
+      }
+    }
+  };
+
+  // Monthly credit card usage calculation
+  const cardUsageMap = useMemo(() => {
+    const usage = {};
+    creditCards.forEach(card => {
+      // Sum transactions in current viewing month for this card
+      const used = filteredTransactions
+        .filter(t => t.paymentMethod === 'credit' && t.cardId === card.id)
+        .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+
+      const limit = Number(card.limit) || 0;
+      const remaining = Math.max(0, limit - used);
+      const percent = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+      const isOver = limit > 0 && used > limit;
+
+      usage[card.id] = {
+        card,
+        used,
+        limit,
+        remaining,
+        percent,
+        isOver,
+      };
+    });
+    return usage;
+  }, [creditCards, filteredTransactions]);
+
+  // ── Recurring / Fixed Expenses Management ──
+  const addRecurringExpense = async (item) => {
+    const newRec = {
+      id: 'rec_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+      name: item.name.trim(),
+      amount: Number(item.amount) || 0,
+      type: item.type || 'expense',
+      category: item.category || (categories[0] || '生活'),
+      paymentMethod: item.paymentMethod || 'cash',
+      cardId: item.cardId || null,
+      cardName: item.cardName || null,
+      dayOfMonth: Number(item.dayOfMonth) || 1,
+      active: item.active !== false,
+      lastRecordedMonth: null,
+    };
+    const updated = [...recurringExpenses, newRec];
+    setRecurringExpenses(updated);
+
+    if (user) {
+      try {
+        await setDoc(doc(db, 'user_budgets', user.uid), { recurringExpenses: updated }, { merge: true });
+      } catch (err) {
+        console.error('Failed to add recurring expense:', err);
+      }
+    }
+    return newRec;
+  };
+
+  const updateRecurringExpense = async (id, data) => {
+    const updated = recurringExpenses.map(r => r.id === id ? { ...r, ...data } : r);
+    setRecurringExpenses(updated);
+
+    if (user) {
+      try {
+        await setDoc(doc(db, 'user_budgets', user.uid), { recurringExpenses: updated }, { merge: true });
+      } catch (err) {
+        console.error('Failed to update recurring expense:', err);
+      }
+    }
+  };
+
+  const deleteRecurringExpense = async (id) => {
+    const updated = recurringExpenses.filter(r => r.id !== id);
+    setRecurringExpenses(updated);
+
+    if (user) {
+      try {
+        await setDoc(doc(db, 'user_budgets', user.uid), { recurringExpenses: updated }, { merge: true });
+      } catch (err) {
+        console.error('Failed to delete recurring expense:', err);
+      }
+    }
+  };
+
+  // Manual immediate recording of a recurring item for testing or instant bookkeeping
+  const triggerRecurringItem = async (recId) => {
+    if (!user) return;
+    const rec = recurringExpenses.find(r => r.id === recId);
+    if (!rec) return;
+
+    const now = new Date();
+    const curMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const curDayStr = String(now.getDate()).padStart(2, '0');
+    const txDate = `${curMonth}-${curDayStr}`;
+
+    await addDoc(collection(db, 'transactions'), {
+      type: rec.type || 'expense',
+      amount: Number(rec.amount),
+      category: rec.category || '生活',
+      description: `[固定支出] ${rec.name}`,
+      date: txDate,
+      paymentMethod: rec.paymentMethod || 'cash',
+      cardId: rec.cardId || null,
+      cardName: rec.cardName || null,
+      recurringId: rec.id,
+      uid: user.uid,
+      createdAt: Date.now(),
+    });
+
+    const updated = recurringExpenses.map(r => r.id === recId ? { ...r, lastRecordedMonth: curMonth } : r);
+    setRecurringExpenses(updated);
+
+    try {
+      await setDoc(doc(db, 'user_budgets', user.uid), { recurringExpenses: updated }, { merge: true });
+    } catch (err) {
+      console.error('Failed to sync triggered recurring item:', err);
+    }
+  };
+
+  // ── Auto-Bookkeeping Engine (Automatic Execution on App Load) ──
+  const hasRunRecurringEngineRef = useRef(false);
+  useEffect(() => {
+    if (!user || dataLoading || recurringExpenses.length === 0) return;
+    if (hasRunRecurringEngineRef.current) return;
+    hasRunRecurringEngineRef.current = true;
+
+    const runAutoBookkeeping = async () => {
+      const now = new Date();
+      const curYear = now.getFullYear();
+      const curMonthNum = now.getMonth() + 1;
+      const curMonthStr = `${curYear}-${String(curMonthNum).padStart(2, '0')}`;
+      const curDay = now.getDate();
+
+      let modified = false;
+      const updatedRecs = [...recurringExpenses];
+
+      for (let i = 0; i < updatedRecs.length; i++) {
+        const rec = updatedRecs[i];
+        if (rec.active === false) continue;
+
+        const scheduledDay = Number(rec.dayOfMonth) || 1;
+        // Check if date condition met and not yet recorded this month
+        if (curDay >= scheduledDay && rec.lastRecordedMonth !== curMonthStr) {
+          // Double check transactions to avoid duplicate
+          const alreadyRecorded = transactions.some(
+            t => (t.recurringId === rec.id && t.date?.startsWith(curMonthStr)) ||
+                 (t.description === `[固定支出] ${rec.name}` && t.date?.startsWith(curMonthStr))
+          );
+
+          if (!alreadyRecorded) {
+            const dayStr = String(Math.min(scheduledDay, 28)).padStart(2, '0');
+            const txDate = `${curMonthStr}-${dayStr}`;
+
+            try {
+              await addDoc(collection(db, 'transactions'), {
+                type: rec.type || 'expense',
+                amount: Number(rec.amount),
+                category: rec.category || '生活',
+                description: `[固定支出] ${rec.name}`,
+                date: txDate,
+                paymentMethod: rec.paymentMethod || 'cash',
+                cardId: rec.cardId || null,
+                cardName: rec.cardName || null,
+                recurringId: rec.id,
+                uid: user.uid,
+                createdAt: Date.now(),
+              });
+            } catch (err) {
+              console.error(`Auto-bookkeeping failed for ${rec.name}:`, err);
+            }
+          }
+
+          updatedRecs[i] = { ...rec, lastRecordedMonth: curMonthStr };
+          modified = true;
+        }
+      }
+
+      if (modified) {
+        setRecurringExpenses(updatedRecs);
+        try {
+          await setDoc(doc(db, 'user_budgets', user.uid), { recurringExpenses: updatedRecs }, { merge: true });
+        } catch (err) {
+          console.error('Failed to sync updated recurring status:', err);
+        }
+      }
+    };
+
+    runAutoBookkeeping();
+  }, [user, dataLoading, recurringExpenses, transactions]);
 
   const value = {
     user, authLoading, dataLoading, logout,
     theme, toggleTheme,
     transactions, filteredTransactions,
     addTransaction, updateTransaction, deleteTransaction,
-    categories, addCategory, categoryIcons,
+    // Categories & Custom Icons
+    categories, addCategory, updateCategory, deleteCategory, categoryIcons,
+    // Credit Cards & Limits
+    creditCards, addCreditCard, updateCreditCard, deleteCreditCard, cardUsageMap,
+    // Recurring / Fixed Expenses (Auto Bookkeeping)
+    recurringExpenses, addRecurringExpense, updateRecurringExpense, deleteRecurringExpense, triggerRecurringItem,
     income, expense, balance,
     viewYear, viewMonth, setViewYear, setViewMonth, prevMonth, nextMonth, prevYear, nextYear, monthStr,
-    // Budget & Analysis additions
+    // Budget & Analysis
     budgets, setBudget, currentBudget, budgetRemaining, budgetUsedPercent,
     yearlyIncome, yearlyExpense, yearlyBalance, yearlyMonthlyBreakdown, allYearsSummary,
   };
-
 
   return <ExpenseContext.Provider value={value}>{children}</ExpenseContext.Provider>;
 };

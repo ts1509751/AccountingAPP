@@ -42,7 +42,7 @@ function formatDateLabel(dateStr) {
 }
 
 export default function TransactionList({ onEdit }) {
-  const { transactions, filteredTransactions, deleteTransaction, categoryIcons } = useExpense();
+  const { transactions, filteredTransactions, deleteTransaction, categoryIcons, creditCards } = useExpense();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchScope, setSearchScope] = useState('month'); // 'month' | 'all'
   const [showExportModal, setShowExportModal] = useState(false);
@@ -50,14 +50,16 @@ export default function TransactionList({ onEdit }) {
   const normalizedQ = normalizeQuery(searchQuery);
   const isSearching = normalizedQ.length > 0;
 
-  // Search filter matcher (supports description, category, amount, date, and paymentMethod)
+  // Search filter matcher (supports description, category, amount, date, paymentMethod, and cardName)
   const matchTx = (tx) => {
     if (!normalizedQ) return true;
     const desc = normalizeQuery(tx.description || '');
     const cat = normalizeQuery(tx.category || '');
     const amtStr = normalizeQuery(tx.amount || '');
     const dateStr = normalizeQuery(tx.date || '');
-    const payStr = (tx.paymentMethod === 'credit') ? '信用卡 刷卡 credit card' : '現金 cash';
+    const cardObj = creditCards.find(c => c.id === tx.cardId);
+    const cardStr = normalizeQuery(tx.cardName || cardObj?.name || '');
+    const payStr = (tx.paymentMethod === 'credit') ? `信用卡 刷卡 credit card ${cardStr}` : '現金 cash';
     return desc.includes(normalizedQ) || cat.includes(normalizedQ) || amtStr.includes(normalizedQ) || dateStr.includes(normalizedQ) || payStr.includes(normalizedQ);
   };
 
@@ -203,7 +205,9 @@ export default function TransactionList({ onEdit }) {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
                       <span className="tx-name">{tx.description || tx.category}</span>
                       <span className={`tx-payment-tag ${tx.paymentMethod === 'credit' ? 'credit' : 'cash'}`}>
-                        {tx.paymentMethod === 'credit' ? '💳 信用卡' : '💵 現金'}
+                        {tx.paymentMethod === 'credit'
+                          ? (tx.cardName || creditCards.find(c => c.id === tx.cardId)?.name ? `💳 ${tx.cardName || creditCards.find(c => c.id === tx.cardId)?.name}` : '💳 信用卡')
+                          : '💵 現金'}
                       </span>
                     </div>
                     <div className="tx-meta">{tx.category} · {tx.date}</div>

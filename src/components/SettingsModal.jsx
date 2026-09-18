@@ -1,12 +1,18 @@
 import { useState } from 'react';
-import { Settings, Sun, Moon, LogOut, FileSpreadsheet } from 'lucide-react';
+import { Settings, Sun, Moon, LogOut, FileSpreadsheet, Tag, CreditCard, Clock } from 'lucide-react';
 import { useExpense } from '../context/ExpenseContext';
 import ExportModal from './ExportModal';
+import CategoryModal from './CategoryModal';
+import CreditCardModal from './CreditCardModal';
+import RecurringModal from './RecurringModal';
 
 export default function SettingsModal() {
   const { theme, toggleTheme, logout, user } = useExpense();
   const [open, setOpen] = useState(false);
   const [showExport, setShowExport] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showCreditCardModal, setShowCreditCardModal] = useState(false);
+  const [showRecurringModal, setShowRecurringModal] = useState(false);
 
   return (
     <>
@@ -25,6 +31,33 @@ export default function SettingsModal() {
                 {user?.displayName || user?.email || '使用者'}
               </div>
             </div>
+
+            {/* Category Management */}
+            <button
+              className="settings-item"
+              onClick={() => { setShowCategoryModal(true); setOpen(false); }}
+            >
+              <Tag size={18} style={{ color: 'var(--accent-blue)' }} />
+              分類管理與圖示修改
+            </button>
+
+            {/* Credit Card Management */}
+            <button
+              className="settings-item"
+              onClick={() => { setShowCreditCardModal(true); setOpen(false); }}
+            >
+              <CreditCard size={18} style={{ color: '#8b5cf6' }} />
+              信用卡額度管理
+            </button>
+
+            {/* Recurring Expenses (Auto-Bookkeeping) */}
+            <button
+              className="settings-item"
+              onClick={() => { setShowRecurringModal(true); setOpen(false); }}
+            >
+              <Clock size={18} style={{ color: 'var(--accent-orange)' }} />
+              固定支出 (自動記帳)
+            </button>
 
             {/* Theme toggle */}
             <button className="settings-item" onClick={toggleTheme}>
@@ -53,8 +86,11 @@ export default function SettingsModal() {
         </>
       )}
 
-      {/* Export Modal */}
+      {/* Modals */}
       <ExportModal isOpen={showExport} onClose={() => setShowExport(false)} />
+      <CategoryModal isOpen={showCategoryModal} onClose={() => setShowCategoryModal(false)} />
+      <CreditCardModal isOpen={showCreditCardModal} onClose={() => setShowCreditCardModal(false)} />
+      <RecurringModal isOpen={showRecurringModal} onClose={() => setShowRecurringModal(false)} />
     </>
   );
 }

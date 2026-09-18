@@ -5,10 +5,11 @@ import { useDragScroll } from '../hooks/useDragScroll';
 import { CreditCard, Banknote } from 'lucide-react';
 
 export default function EditModal({ transaction, onClose }) {
-  const { updateTransaction, categories, categoryIcons } = useExpense();
+  const { updateTransaction, categories, categoryIcons, creditCards, cardUsageMap } = useExpense();
   const [form, setForm] = useState({
     ...transaction,
     paymentMethod: transaction?.paymentMethod || 'cash',
+    cardId: transaction?.cardId || (creditCards[0]?.id || ''),
   });
 
   const { dragProps, isDragging, hasMoved } = useDragScroll();
@@ -17,18 +18,30 @@ export default function EditModal({ transaction, onClose }) {
     setForm({
       ...transaction,
       paymentMethod: transaction?.paymentMethod || 'cash',
+      cardId: transaction?.cardId || (creditCards[0]?.id || ''),
     });
-  }, [transaction]);
+  }, [transaction, creditCards]);
 
   const handleSave = async () => {
     if (!form.amount || !form.category || !form.date) return;
+    
+    let cardName = null;
+    let cardIdToSave = null;
+    if (form.paymentMethod === 'credit') {
+      cardIdToSave = form.cardId || (creditCards[0]?.id || null);
+      const matched = creditCards.find(c => c.id === cardIdToSave);
+      if (matched) cardName = matched.name;
+    }
+
     await updateTransaction(transaction.id, {
       type: form.type,
       amount: Number(form.amount),
       category: form.category,
-      description: form.description,
+      description: form.description || '',
       date: form.date,
       paymentMethod: form.paymentMethod || 'cash',
+      cardId: cardIdToSave,
+      cardName,
     });
     onClose();
   };
@@ -77,6 +90,26 @@ export default function EditModal({ transaction, onClose }) {
               <span>信用卡 (Card)</span>
             </button>
           </div>
+
+          {form.paymentMethod === 'credit' && creditCards.length > 0 && (
+            <div style={{ marginTop: '0.65rem' }}>
+              <label className="modal-label" style={{ fontSize: '0.78rem' }}>使用卡片</label>
+              <select
+                className="modal-input"
+                value={form.cardId || ''}
+                onChange={e => setForm(f => ({ ...f, cardId: e.target.value }))}
+              >
+                {creditCards.map(c => {
+                  const usage = cardUsageMap[c.id] || { remaining: c.limit || 0 };
+                  return (
+                    <option key={c.id} value={c.id}>
+                      💳 {c.name} {c.bank ? `(${c.bank})` : ''} · 剩餘額度: NT${Number(usage.remaining || 0).toLocaleString()}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* Category pills with drag-to-scroll */}
