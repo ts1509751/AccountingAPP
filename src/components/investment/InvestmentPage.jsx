@@ -75,6 +75,7 @@ export default function InvestmentPage({ externalOpenAdd, onCloseExternalAdd }) 
       symbol: plan.symbol,
       accountId: plan.accountId,
       accountName: plan.accountName,
+      fixedAmount: plan.fixedAmount,
       isDCA: true,
       notes: `定期定額約定扣款 (約定 NT$${plan.fixedAmount})`,
     });

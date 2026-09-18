@@ -3,13 +3,16 @@ import { useInvestment } from '../../context/InvestmentContext';
 import { X, Calculator, ArrowDownRight, ArrowUpRight, Sparkles } from 'lucide-react';
 import { findStockByCode, searchStocks } from '../../utils/stockDatabase';
 
+const formatRaw = (n) =>
+  new Intl.NumberFormat('zh-TW', { minimumFractionDigits: 0 }).format(n);
+
 export default function InvestmentModal({ transaction, onClose }) {
   const { addInvestment, updateInvestment, investmentAccounts, dcaPlans } = useInvestment();
 
   const accounts = Array.isArray(investmentAccounts) ? investmentAccounts : [];
   const plans = Array.isArray(dcaPlans) ? dcaPlans : [];
 
-  const isEditing = Boolean(transaction);
+  const isEditing = Boolean(transaction && transaction.id);
   const today = new Date().toISOString().split('T')[0];
 
   const [action, setAction] = useState(transaction?.action || 'buy');
@@ -128,7 +131,7 @@ export default function InvestmentModal({ transaction, onClose }) {
       ? `${matched.code} ${matched.name}`
       : symbol.trim();
 
-    const selectedAcc = investmentAccounts.find(a => a.id === accountId);
+    const selectedAcc = accounts.find(a => a.id === accountId);
     const accountName = selectedAcc?.name || '預設主帳戶';
 
     const data = {
@@ -175,6 +178,15 @@ export default function InvestmentModal({ transaction, onClose }) {
             <X size={18} />
           </button>
         </div>
+
+        {transaction?.fixedAmount && isDCA && (
+          <div style={{ marginBottom: '1rem', background: 'var(--accent-blue-dim)', border: '1px solid var(--border-active)', borderRadius: 'var(--radius-md)', padding: '0.65rem 0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '1.1rem' }}>💡</span>
+            <div style={{ fontSize: '0.82rem', color: 'var(--text-primary)' }}>
+              已帶入定期定額計劃：約定扣款 <strong>NT$ {formatRaw(transaction.fixedAmount)}</strong>，請填入本次實際扣款成交單價與股數。
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
           {/* Action Toggle: 買進 (綠) vs 賣出 (紅) */}
@@ -291,7 +303,7 @@ export default function InvestmentModal({ transaction, onClose }) {
                       if (p.accountId) setAccountId(p.accountId);
                     }}
                   >
-                    📅 {p.symbol} (${formatMoney(p.fixedAmount).replace('TWD', '').replace('$', '').trim()})
+                    📅 {p.symbol} (NT$ {formatRaw(p.fixedAmount)})
                   </button>
                 ))}
               </div>
