@@ -1,7 +1,7 @@
-﻿import { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useInvestment } from '../../context/InvestmentContext';
 import { findStockByCode, searchStocks } from '../../utils/stockDatabase';
-import { X, Plus, Edit2, Trash2, Calendar, Clock, DollarSign, Play, Sparkles } from 'lucide-react';
+import { X, Plus, Edit2, Trash2, Calendar, Play } from 'lucide-react';
 
 const formatRaw = (n) =>
   new Intl.NumberFormat('zh-TW', { minimumFractionDigits: 0 }).format(n);
@@ -15,6 +15,9 @@ export default function DcaPlanModal({ isOpen, onClose, onQuickDcaBuy }) {
     investmentAccounts,
   } = useInvestment();
 
+  const plans = Array.isArray(dcaPlans) ? dcaPlans : [];
+  const accounts = Array.isArray(investmentAccounts) ? investmentAccounts : [];
+
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState(null);
 
@@ -23,17 +26,17 @@ export default function DcaPlanModal({ isOpen, onClose, onQuickDcaBuy }) {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [detectedStock, setDetectedStock] = useState(null);
   const [assetType, setAssetType] = useState('stock');
-  const [accountId, setAccountId] = useState(investmentAccounts[0]?.id || 'default');
+  const [accountId, setAccountId] = useState(() => accounts[0]?.id || 'default');
   const [fixedAmount, setFixedAmount] = useState('');
   const [dayOfMonth, setDayOfMonth] = useState(6);
   const [notes, setNotes] = useState('');
-
-  if (!isOpen) return null;
 
   const suggestions = useMemo(() => {
     if (!symbol || !showSuggestions) return [];
     return searchStocks(symbol, 5);
   }, [symbol, showSuggestions]);
+
+  if (!isOpen) return null;
 
   const handleSymbolChange = (val) => {
     setSymbol(val);
@@ -58,7 +61,7 @@ export default function DcaPlanModal({ isOpen, onClose, onQuickDcaBuy }) {
     setSymbol('');
     setDetectedStock(null);
     setAssetType('stock');
-    setAccountId(investmentAccounts[0]?.id || 'default');
+    setAccountId(accounts[0]?.id || 'default');
     setFixedAmount('');
     setDayOfMonth(6);
     setNotes('');
@@ -70,7 +73,7 @@ export default function DcaPlanModal({ isOpen, onClose, onQuickDcaBuy }) {
     setEditingId(plan.id);
     setSymbol(plan.symbol);
     setAssetType(plan.assetType || 'stock');
-    setAccountId(plan.accountId || investmentAccounts[0]?.id || 'default');
+    setAccountId(plan.accountId || accounts[0]?.id || 'default');
     setFixedAmount(plan.fixedAmount ? String(plan.fixedAmount) : '');
     setDayOfMonth(plan.dayOfMonth || 6);
     setNotes(plan.notes || '');
@@ -85,7 +88,7 @@ export default function DcaPlanModal({ isOpen, onClose, onQuickDcaBuy }) {
       ? `${matched.code} ${matched.name}`
       : symbol.trim();
 
-    const selectedAcc = investmentAccounts.find(a => a.id === accountId);
+    const selectedAcc = accounts.find(a => a.id === accountId);
     const accountName = selectedAcc?.name || '預設主帳戶';
 
     const payload = {
@@ -117,8 +120,8 @@ export default function DcaPlanModal({ isOpen, onClose, onQuickDcaBuy }) {
     await updateDcaPlan(plan.id, { active: plan.active === false });
   };
 
-  const totalMonthlyDca = dcaPlans
-    .filter(p => p.active !== false)
+  const totalMonthlyDca = plans
+    .filter(p => p && p.active !== false)
     .reduce((sum, p) => sum + Number(p.fixedAmount || 0), 0);
 
   return (
@@ -147,7 +150,7 @@ export default function DcaPlanModal({ isOpen, onClose, onQuickDcaBuy }) {
             <div className="banner-num">NT$ {formatRaw(totalMonthlyDca)}</div>
           </div>
           <div className="banner-badge">
-            {dcaPlans.filter(p => p.active !== false).length} 檔計劃執行中
+            {plans.filter(p => p && p.active !== false).length} 檔計劃執行中
           </div>
         </div>
 
@@ -185,7 +188,7 @@ export default function DcaPlanModal({ isOpen, onClose, onQuickDcaBuy }) {
                       >
                         <span className="stock-item-code">{s.code}</span>
                         <span className="stock-item-name">{s.name}</span>
-                        <span className="stock-item-market">{s.market} · {s.type.toUpperCase()}</span>
+                        <span className="stock-item-market">{s.type === 'etf' ? 'ETF' : '股票'}</span>
                       </div>
                     ))}
                   </div>
@@ -200,7 +203,7 @@ export default function DcaPlanModal({ isOpen, onClose, onQuickDcaBuy }) {
                   value={accountId}
                   onChange={e => setAccountId(e.target.value)}
                 >
-                  {investmentAccounts.map(a => (
+                  {accounts.map(a => (
                     <option key={a.id} value={a.id}>
                       💼 {a.name} ({a.broker || '證券戶'})
                     </option>
@@ -276,7 +279,7 @@ export default function DcaPlanModal({ isOpen, onClose, onQuickDcaBuy }) {
 
         {/* Plans List */}
         <div className="recurring-items-list">
-          {dcaPlans.length === 0 ? (
+          {plans.length === 0 ? (
             <div className="empty-state-box">
               <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>📅</div>
               <p style={{ fontWeight: 600, color: 'var(--text-primary)' }}>尚未建立定期定額計劃</p>
@@ -285,7 +288,7 @@ export default function DcaPlanModal({ isOpen, onClose, onQuickDcaBuy }) {
               </p>
             </div>
           ) : (
-            dcaPlans.map(plan => {
+            plans.map(plan => {
               const isInactive = plan.active === false;
 
               return (

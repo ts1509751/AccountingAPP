@@ -3,7 +3,7 @@ import { useInvestment } from '../../context/InvestmentContext';
 import InvestmentModal from './InvestmentModal';
 import InvestmentAccountModal from './InvestmentAccountModal';
 import DcaPlanModal from './DcaPlanModal';
-import { Plus, TrendingUp, TrendingDown, DollarSign, Edit2, Trash2, Layers, History, ArrowDownRight, ArrowUpRight, Search, X, ChevronRight, Briefcase, Calendar } from 'lucide-react';
+import { Plus, Edit2, Trash2, Layers, History, ArrowDownRight, ArrowUpRight, Search, X, ChevronRight, Briefcase, Calendar } from 'lucide-react';
 
 const formatMoney = (n) =>
   new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', minimumFractionDigits: 0 }).format(n);
@@ -26,7 +26,6 @@ export default function InvestmentPage({ externalOpenAdd, onCloseExternalAdd }) 
   const {
     investments,
     activeInvestments,
-    loading,
     holdings,
     totalCostBasis,
     totalRealizedPnL,
@@ -37,6 +36,9 @@ export default function InvestmentPage({ externalOpenAdd, onCloseExternalAdd }) 
     accountStatsMap,
     dcaPlans,
   } = useInvestment();
+
+  const plans = Array.isArray(dcaPlans) ? dcaPlans : [];
+  const accounts = Array.isArray(investmentAccounts) ? investmentAccounts : [];
 
   const [activeTab, setActiveTab] = useState('holdings'); // 'holdings' | 'history'
   const [showModal, setShowModal] = useState(false);
@@ -181,7 +183,7 @@ export default function InvestmentPage({ externalOpenAdd, onCloseExternalAdd }) 
             <span className="inv-pill-count">({investments.length})</span>
           </button>
 
-          {investmentAccounts.map(acc => {
+          {accounts.map(acc => {
             const isSelected = selectedAccountId === acc.id;
             const stats = accountStatsMap[acc.id] || { txCount: 0 };
             return (
@@ -209,8 +211,8 @@ export default function InvestmentPage({ externalOpenAdd, onCloseExternalAdd }) 
           >
             <Calendar size={14} />
             <span className="tool-btn-text">定期定額</span>
-            {dcaPlans.filter(p => p.active !== false).length > 0 && (
-              <span className="tool-btn-badge">{dcaPlans.filter(p => p.active !== false).length}</span>
+            {plans.filter(p => p && p.active !== false).length > 0 && (
+              <span className="tool-btn-badge">{plans.filter(p => p && p.active !== false).length}</span>
             )}
           </button>
 
@@ -232,7 +234,7 @@ export default function InvestmentPage({ externalOpenAdd, onCloseExternalAdd }) 
           <div className="inv-hero-header">
             <span className="inv-hero-label">目前持股總成本</span>
             <span className="inv-badge-blue">
-              {selectedAccountId === 'all' ? '全部庫存' : investmentAccounts.find(a => a.id === selectedAccountId)?.name || '分帳戶庫存'}
+              {selectedAccountId === 'all' ? '全部庫存' : accounts.find(a => a.id === selectedAccountId)?.name || '分帳戶庫存'}
             </span>
           </div>
           <div className="inv-hero-val">{formatMoney(totalCostBasis)}</div>
@@ -572,17 +574,21 @@ export default function InvestmentPage({ externalOpenAdd, onCloseExternalAdd }) 
       )}
 
       {/* Sub-account Management Modal */}
-      <InvestmentAccountModal
-        isOpen={showAccountModal}
-        onClose={() => setShowAccountModal(false)}
-      />
+      {showAccountModal && (
+        <InvestmentAccountModal
+          isOpen={showAccountModal}
+          onClose={() => setShowAccountModal(false)}
+        />
+      )}
 
       {/* DCA Plan Modal */}
-      <DcaPlanModal
-        isOpen={showDcaModal}
-        onClose={() => setShowDcaModal(false)}
-        onQuickDcaBuy={handleQuickDcaBuy}
-      />
+      {showDcaModal && (
+        <DcaPlanModal
+          isOpen={showDcaModal}
+          onClose={() => setShowDcaModal(false)}
+          onQuickDcaBuy={handleQuickDcaBuy}
+        />
+      )}
     </div>
   );
 }

@@ -1,17 +1,20 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useInvestment } from '../../context/InvestmentContext';
 import { X, Calculator, ArrowDownRight, ArrowUpRight, Sparkles } from 'lucide-react';
 import { findStockByCode, searchStocks } from '../../utils/stockDatabase';
 
 export default function InvestmentModal({ transaction, onClose }) {
-  const { addInvestment, updateInvestment, investmentAccounts } = useInvestment();
+  const { addInvestment, updateInvestment, investmentAccounts, dcaPlans } = useInvestment();
+
+  const accounts = Array.isArray(investmentAccounts) ? investmentAccounts : [];
+  const plans = Array.isArray(dcaPlans) ? dcaPlans : [];
 
   const isEditing = Boolean(transaction);
   const today = new Date().toISOString().split('T')[0];
 
   const [action, setAction] = useState(transaction?.action || 'buy');
   const [isDCA, setIsDCA] = useState(Boolean(transaction?.isDCA));
-  const [accountId, setAccountId] = useState(transaction?.accountId || (investmentAccounts[0]?.id || 'default'));
+  const [accountId, setAccountId] = useState(transaction?.accountId || (accounts[0]?.id || 'default'));
   const [assetType, setAssetType] = useState(transaction?.assetType || 'stock');
   const [symbol, setSymbol] = useState(transaction?.symbol || '');
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -231,7 +234,7 @@ export default function InvestmentModal({ transaction, onClose }) {
                 onChange={e => setAccountId(e.target.value)}
                 style={{ padding: '0.65rem 0.75rem', fontSize: '0.88rem' }}
               >
-                {investmentAccounts.map(acc => (
+                {accounts.map(acc => (
                   <option key={acc.id} value={acc.id}>
                     💼 {acc.name}
                   </option>
@@ -268,6 +271,32 @@ export default function InvestmentModal({ transaction, onClose }) {
               )}
             </div>
           </div>
+
+          {/* Quick pick from active DCA plans */}
+          {action === 'buy' && isDCA && plans.length > 0 && (
+            <div style={{ marginBottom: '1rem', background: 'var(--bg-card)', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.4rem', fontWeight: 600 }}>
+                ⚡ 點擊快速帶入設定的定期定額計劃：
+              </div>
+              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                {plans.filter(p => p && p.active !== false).map(p => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className="inv-account-pill"
+                    style={{ fontSize: '0.78rem', padding: '0.3rem 0.65rem' }}
+                    onClick={() => {
+                      setSymbol(p.symbol);
+                      if (p.assetType) setAssetType(p.assetType);
+                      if (p.accountId) setAccountId(p.accountId);
+                    }}
+                  >
+                    📅 {p.symbol} (${formatMoney(p.fixedAmount).replace('TWD', '').replace('$', '').trim()})
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Symbol / Name */}
           <div className="modal-field" style={{ position: 'relative' }}>

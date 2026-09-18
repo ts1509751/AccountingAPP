@@ -1,6 +1,6 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useInvestment } from '../../context/InvestmentContext';
-import { X, Plus, Edit2, Trash2, Check, Briefcase, Layers } from 'lucide-react';
+import { X, Plus, Edit2, Trash2, Check, Briefcase } from 'lucide-react';
 
 const ACCOUNT_COLORS = [
   '#2563eb', // Blue
@@ -24,6 +24,8 @@ export default function InvestmentAccountModal({ isOpen, onClose }) {
     deleteAccount,
     accountStatsMap,
   } = useInvestment();
+
+  const accounts = Array.isArray(investmentAccounts) ? investmentAccounts : [];
 
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -76,7 +78,7 @@ export default function InvestmentAccountModal({ isOpen, onClose }) {
   };
 
   const handleDelete = async (acc) => {
-    if (investmentAccounts.length <= 1) {
+    if (accounts.length <= 1) {
       alert('請至少保留一個投資分帳戶');
       return;
     }
@@ -187,7 +189,7 @@ export default function InvestmentAccountModal({ isOpen, onClose }) {
 
         {/* Accounts List */}
         <div className="credit-cards-list">
-          {investmentAccounts.map(acc => {
+          {accounts.map(acc => {
             const stats = accountStatsMap[acc.id] || { totalCost: 0, holdingsCount: 0, txCount: 0 };
 
             return (
@@ -210,7 +212,7 @@ export default function InvestmentAccountModal({ isOpen, onClose }) {
                     >
                       <Edit2 size={14} />
                     </button>
-                    {investmentAccounts.length > 1 && (
+                    {accounts.length > 1 && (
                       <button
                         type="button"
                         className="cc-action-btn delete"

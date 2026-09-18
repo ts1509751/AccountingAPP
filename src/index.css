@@ -3335,11 +3335,24 @@ input:checked + .toggle-slider::before {
 }
 
 @media (max-width: 580px) {
-  .tool-btn-text {
-    display: none;
+  .inv-subaccount-bar {
+    gap: 0.5rem;
+  }
+  .inv-subaccount-scroll {
+    width: 100%;
+  }
+  .inv-subaccount-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
   }
   .inv-top-tool-btn {
-    padding: 0.45rem 0.6rem;
+    justify-content: center;
+    padding: 0.55rem 0.65rem;
+  }
+  .tool-btn-text {
+    display: inline;
   }
 }
 
