@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useExpense } from '../context/ExpenseContext';
 import { getCategoryIcon, POPULAR_ICONS } from '../utils/categories';
 import { useDragScroll } from '../hooks/useDragScroll';
-import { Plus, X, Calendar, CreditCard, Banknote, Smile, Settings } from 'lucide-react';
+import { parseNaturalLanguageInput } from '../utils/nlpParser';
+import { Plus, X, Calendar, CreditCard, Banknote, Smile, Sparkles, Check, Send } from 'lucide-react';
 import CategoryModal from './CategoryModal';
 import CreditCardModal from './CreditCardModal';
 
@@ -27,6 +28,11 @@ export default function QuickAddPanel({ onClose }) {
   const [paymentMethod, setPaymentMethod] = useState('cash'); // 'cash' | 'credit'
   const [selectedCardId, setSelectedCardId] = useState(creditCards[0]?.id || '');
   const [selectedCategory, setSelectedCategory] = useState(categories[0] || '');
+
+  // Natural language bookkeeping states
+  const [nlpInput, setNlpInput] = useState('');
+  const [parsedResult, setParsedResult] = useState(null);
+  const [nlpApplied, setNlpApplied] = useState(false);
 
   // Submodals
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -87,6 +93,65 @@ export default function QuickAddPanel({ onClose }) {
     onClose();
   };
 
+  const quickExamples = [
+    '今天中午吃牛肉麵 150 元，刷賴點卡',
+    '昨天搭計程車 220 現金',
+    '買全聯生活用品 480 刷J卡',
+  ];
+
+  const handleNlpParse = (textToParse = nlpInput, autoSubmit = false) => {
+    const text = (textToParse || '').trim();
+    if (!text) return;
+
+    const res = parseNaturalLanguageInput(text, {
+      categories,
+      creditCards,
+      referenceDate: new Date(),
+    });
+
+    if (res) {
+      setParsedResult(res);
+      setNlpApplied(true);
+      setType(res.type);
+      if (res.amount > 0) setAmount(String(res.amount));
+      if (res.description) setDescription(res.description);
+      if (res.date) setDate(res.date);
+      if (res.category) setSelectedCategory(res.category);
+      if (res.paymentMethod) setPaymentMethod(res.paymentMethod);
+      if (res.cardId) setSelectedCardId(res.cardId);
+
+      if (autoSubmit && res.amount > 0) {
+        handleSubmitDirect(res);
+      }
+    }
+  };
+
+  const handleSubmitDirect = async (res) => {
+    let cardName = null;
+    let cardIdToSave = null;
+    if (res.paymentMethod === 'credit') {
+      cardIdToSave = res.cardId || (creditCards[0]?.id || null);
+      const matched = creditCards.find(c => c.id === cardIdToSave);
+      if (matched) cardName = matched.name;
+    }
+
+    await addTransaction({
+      type: res.type,
+      amount: Number(res.amount),
+      category: res.category || selectedCategory || categories[0] || '生活',
+      description: (res.description || '').trim(),
+      date: res.date || today,
+      paymentMethod: res.paymentMethod,
+      cardId: cardIdToSave,
+      cardName,
+    });
+    setAmount('');
+    setDescription('');
+    setDate(today);
+    setNlpInput('');
+    onClose();
+  };
+
   return (
     <>
       <div className="quick-add-overlay" onClick={onClose} />
@@ -94,11 +159,108 @@ export default function QuickAddPanel({ onClose }) {
         <div className="panel-handle" />
 
         {/* Header row */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>快速記帳</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
+          <span style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--text-primary)' }}>快速記帳</span>
           <button className="icon-btn" onClick={onClose} style={{ width: 32, height: 32 }}>
             <X size={18} />
           </button>
+        </div>
+
+        {/* ── Natural Language Smart Bookkeeping Input ── */}
+        <div className="nlp-input-card">
+          <div className="nlp-input-header">
+            <span className="nlp-label">
+              <Sparkles size={14} style={{ color: 'var(--accent-blue)', verticalAlign: 'middle', marginRight: '4px' }} />
+              自然語言智慧記帳
+            </span>
+            <span className="nlp-sub-hint">輸入一句話自動辨識所有欄位</span>
+          </div>
+
+          <div className="nlp-input-row">
+            <input
+              className="nlp-input"
+              value={nlpInput}
+              onChange={e => {
+                setNlpInput(e.target.value);
+                setNlpApplied(false);
+              }}
+              placeholder="例: 今天中午吃牛肉麵 150 元，刷賴點卡"
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleNlpParse(nlpInput, false);
+                }
+              }}
+            />
+            <button
+              type="button"
+              className="nlp-parse-btn"
+              onClick={() => handleNlpParse(nlpInput, false)}
+              title="自動解析並填入"
+            >
+              <Sparkles size={14} />
+              <span>辨識</span>
+            </button>
+          </div>
+
+          {/* Quick example tags */}
+          <div className="nlp-examples-row">
+            <span className="nlp-ex-label">💡 範例：</span>
+            <div className="nlp-examples-scroll">
+              {quickExamples.map((ex, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  className="nlp-ex-chip"
+                  onClick={() => {
+                    setNlpInput(ex);
+                    handleNlpParse(ex, false);
+                  }}
+                  title="點擊帶入此範例"
+                >
+                  {ex}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Parsed Result Preview Banner */}
+          {parsedResult && nlpApplied && (
+            <div className="nlp-result-banner">
+              <div className="nlp-result-header-row">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', color: 'var(--accent-green)', fontWeight: 600 }}>
+                  <Check size={14} />
+                  <span>已自動辨識並填入表單：</span>
+                </div>
+                {parsedResult.amount > 0 && (
+                  <button
+                    type="button"
+                    className="nlp-oneclick-submit-btn"
+                    onClick={() => handleSubmitDirect(parsedResult)}
+                    title="直接以此資料記帳送出"
+                  >
+                    <Send size={12} />
+                    <span>⚡ 一鍵直接記帳</span>
+                  </button>
+                )}
+              </div>
+
+              <div className="nlp-chips-grid">
+                <span className="nlp-pill">📅 {parsedResult.date}</span>
+                <span className={`nlp-pill type ${parsedResult.type}`}>
+                  {parsedResult.type === 'expense' ? '💸 支出' : '💵 收入'}
+                </span>
+                <span className="nlp-pill">🏷️ {parsedResult.category}</span>
+                <span className="nlp-pill amount">💰 NT$ {formatRaw(parsedResult.amount)}</span>
+                <span className="nlp-pill">
+                  {parsedResult.paymentMethod === 'credit'
+                    ? `💳 ${parsedResult.cardName || '信用卡'}`
+                    : '💵 現金'}
+                </span>
+                <span className="nlp-pill note">📝 {parsedResult.description}</span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Type toggle */}

@@ -9,7 +9,7 @@ import ChartPage from './components/Chart';
 import AnalysisPage from './components/AnalysisPage';
 import InvestmentPage from './components/investment/InvestmentPage';
 import SettingsModal from './components/SettingsModal';
-import { BookOpen, BarChart2, FileText, TrendingUp, Plus } from 'lucide-react';
+import { BookOpen, BarChart2, FileText, TrendingUp, Plus, Sparkles } from 'lucide-react';
 import appLogo from './assets/logo.png';
 
 function App() {
@@ -114,10 +114,21 @@ function App() {
               </div>
               <div className="desktop-quick-prompt desktop-only">
                 <p className="prompt-title">快捷操作</p>
-                <button className="desktop-prompt-btn" onClick={() => setShowAdd(true)}>
-                  <Plus size={18} />
-                  <span>記帳</span>
-                </button>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.45rem' }}>
+                  <button className="desktop-prompt-btn" onClick={() => setShowAdd(true)}>
+                    <Plus size={18} />
+                    <span>記帳</span>
+                  </button>
+                  <button
+                    className="desktop-prompt-btn"
+                    onClick={() => setShowAdd(true)}
+                    style={{ background: 'var(--accent-blue-dim)', borderColor: 'rgba(74, 158, 255, 0.3)', color: 'var(--accent-blue)' }}
+                    title="輸入一句話自動辨識記帳"
+                  >
+                    <Sparkles size={16} />
+                    <span>智慧記帳</span>
+                  </button>
+                </div>
               </div>
             </aside>
             <section className="ledger-tx-col">

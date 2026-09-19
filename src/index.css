@@ -544,6 +544,204 @@ body {
   opacity: 0.4;
 }
 
+/* =====================================================
+   NATURAL LANGUAGE BOOKKEEPING (智慧自然語言記帳)
+   ===================================================== */
+.nlp-input-card {
+  background: linear-gradient(135deg, rgba(74, 158, 255, 0.08) 0%, rgba(139, 92, 246, 0.06) 100%);
+  border: 1.5px solid rgba(74, 158, 255, 0.3);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 0.95rem;
+  margin-bottom: 1.15rem;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.15);
+  transition: var(--transition);
+}
+
+.nlp-input-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.55rem;
+}
+
+.nlp-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--accent-blue);
+  display: inline-flex;
+  align-items: center;
+}
+
+.nlp-sub-hint {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.nlp-input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.nlp-input {
+  flex: 1;
+  background: var(--bg-card);
+  border: 1.5px solid var(--border);
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  font-family: inherit;
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: var(--transition);
+}
+.nlp-input:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px var(--accent-blue-dim);
+}
+.nlp-input::placeholder {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.nlp-parse-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: var(--accent-blue);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+  font-family: inherit;
+}
+.nlp-parse-btn:hover {
+  background: var(--accent-blue-hover);
+  transform: translateY(-1px);
+}
+
+.nlp-examples-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.55rem;
+}
+
+.nlp-ex-label {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.nlp-examples-scroll {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+.nlp-examples-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.nlp-ex-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.68rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: var(--transition);
+  font-family: inherit;
+}
+.nlp-ex-chip:hover {
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+}
+
+.nlp-result-banner {
+  margin-top: 0.75rem;
+  padding-top: 0.65rem;
+  border-top: 1px dashed rgba(74, 158, 255, 0.25);
+  animation: fadeIn 0.2s ease;
+}
+
+.nlp-result-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.nlp-oneclick-submit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  background: #10b981;
+  color: #ffffff;
+  border: none;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
+  font-family: inherit;
+}
+.nlp-oneclick-submit-btn:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+.nlp-chips-grid {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.nlp-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.nlp-pill.amount {
+  color: var(--accent-green);
+  border-color: rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.08);
+}
+.nlp-pill.type.expense {
+  color: var(--accent-red);
+  background: var(--accent-red-dim);
+}
+.nlp-pill.type.income {
+  color: var(--accent-green);
+  background: var(--accent-green-dim);
+}
+.nlp-pill.note {
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
 .panel-type-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
