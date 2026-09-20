@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings, Sun, Moon, LogOut, FileSpreadsheet, Tag, CreditCard, Clock } from 'lucide-react';
+import { Settings, Sun, Moon, LogOut, FileSpreadsheet, Tag, CreditCard, Clock, Eye, EyeOff } from 'lucide-react';
 import { useExpense } from '../context/ExpenseContext';
 import ExportModal from './ExportModal';
 import CategoryModal from './CategoryModal';
@@ -7,7 +7,7 @@ import CreditCardModal from './CreditCardModal';
 import RecurringModal from './RecurringModal';
 
 export default function SettingsModal() {
-  const { theme, toggleTheme, logout, user } = useExpense();
+  const { theme, toggleTheme, logout, user, hideAmounts, toggleHideAmounts } = useExpense();
   const [open, setOpen] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -65,6 +65,16 @@ export default function SettingsModal() {
               {theme === 'dark' ? '切換亮色模式' : '切換深色模式'}
               <label className="toggle-switch" style={{ pointerEvents: 'none' }}>
                 <input type="checkbox" checked={theme === 'light'} readOnly />
+                <span className="toggle-slider" />
+              </label>
+            </button>
+
+            {/* Hide Amounts (Privacy Mode) toggle */}
+            <button className="settings-item" onClick={toggleHideAmounts}>
+              {hideAmounts ? <EyeOff size={18} style={{ color: 'var(--accent-orange)' }} /> : <Eye size={18} />}
+              首頁隱藏金額模式
+              <label className="toggle-switch" style={{ pointerEvents: 'none' }}>
+                <input type="checkbox" checked={hideAmounts} readOnly />
                 <span className="toggle-slider" />
               </label>
             </button>

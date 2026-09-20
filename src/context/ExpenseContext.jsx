@@ -65,6 +65,27 @@ export const ExpenseProvider = ({ children }) => {
     }
   });
 
+  // Privacy / Hide Amounts Mode
+  const [hideAmounts, setHideAmounts] = useState(() => {
+    try {
+      return localStorage.getItem('hideAmounts') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleHideAmounts = () => {
+    setHideAmounts(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('hideAmounts', String(next));
+      } catch (e) {
+        console.error('Failed to save hideAmounts to localStorage', e);
+      }
+      return next;
+    });
+  };
+
   // Derived month navigation state
   const today = new Date();
   const [viewYear, setViewYear] = useState(today.getFullYear());
@@ -616,6 +637,7 @@ export const ExpenseProvider = ({ children }) => {
     // Recurring / Fixed Expenses (Auto Bookkeeping)
     recurringExpenses, addRecurringExpense, updateRecurringExpense, deleteRecurringExpense, triggerRecurringItem,
     income, expense, balance,
+    hideAmounts, toggleHideAmounts,
     viewYear, viewMonth, setViewYear, setViewMonth, prevMonth, nextMonth, prevYear, nextYear, monthStr,
     // Budget & Analysis
     budgets, setBudget, currentBudget, budgetRemaining, budgetUsedPercent,

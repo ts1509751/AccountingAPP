@@ -42,7 +42,7 @@ function formatDateLabel(dateStr) {
 }
 
 export default function TransactionList({ onEdit }) {
-  const { transactions, filteredTransactions, deleteTransaction, categoryIcons, creditCards } = useExpense();
+  const { transactions, filteredTransactions, deleteTransaction, categoryIcons, creditCards, hideAmounts } = useExpense();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchScope, setSearchScope] = useState('month'); // 'month' | 'all'
   const [showExportModal, setShowExportModal] = useState(false);
@@ -153,8 +153,8 @@ export default function TransactionList({ onEdit }) {
 
             {searchStats && searchStats.count > 0 && (
               <div className="search-stats-badge">
-                找到 {searchStats.count} 筆 · 支出 NT$ {formatRaw(searchStats.expenseSum)}
-                {searchStats.incomeSum > 0 ? ` · 收入 NT$ ${formatRaw(searchStats.incomeSum)}` : ''}
+                找到 {searchStats.count} 筆 · 支出 NT$ {hideAmounts ? '••••' : formatRaw(searchStats.expenseSum)}
+                {searchStats.incomeSum > 0 ? ` · 收入 NT$ ${hideAmounts ? '••••' : formatRaw(searchStats.incomeSum)}` : ''}
               </div>
             )}
           </div>
@@ -213,8 +213,8 @@ export default function TransactionList({ onEdit }) {
                     <div className="tx-meta">{tx.category} · {tx.date}</div>
                   </div>
                   <div className="tx-right">
-                    <div className={`tx-amount ${tx.type}`}>
-                      {tx.type === 'expense' ? '-' : '+'}{formatMoney(tx.amount)}
+                    <div className={`tx-amount ${tx.type} ${hideAmounts ? 'masked' : ''}`}>
+                      {tx.type === 'expense' ? '-' : '+'}{hideAmounts ? '••••' : formatMoney(tx.amount)}
                     </div>
                     <div className="tx-action-btns">
                       <button className="tx-mini-btn edit" onClick={() => onEdit(tx)} aria-label="編輯">
