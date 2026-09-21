@@ -94,9 +94,9 @@ export default function QuickAddPanel({ onClose }) {
   };
 
   const quickExamples = [
-    '今天中午吃牛肉麵 150 元，刷賴點卡',
+    '今天中午牛肉麵 150 刷卡',
     '昨天搭計程車 220 現金',
-    '買全聯生活用品 480 刷J卡',
+    '全聯生活用品 480 刷卡',
   ];
 
   const handleNlpParse = (textToParse = nlpInput, autoSubmit = false) => {
@@ -184,7 +184,7 @@ export default function QuickAddPanel({ onClose }) {
                 setNlpInput(e.target.value);
                 setNlpApplied(false);
               }}
-              placeholder="例: 今天中午吃牛肉麵 150 元，刷賴點卡"
+              placeholder="例: 今天中午牛肉麵 150 刷卡"
               onKeyDown={e => {
                 if (e.key === 'Enter') {
                   e.preventDefault();
@@ -263,7 +263,7 @@ export default function QuickAddPanel({ onClose }) {
           )}
         </div>
 
-        {/* Type toggle */}
+        {/* 1. 支出 / 收入 */}
         <div className="panel-type-row">
           <button
             type="button"
@@ -281,7 +281,21 @@ export default function QuickAddPanel({ onClose }) {
           </button>
         </div>
 
-        {/* Payment Method Selector (現金 or 信用卡) */}
+        {/* 2. 金額 */}
+        <div className="panel-amount-card">
+          <span className="panel-amount-prefix">NT$</span>
+          <input
+            className="panel-amount-field"
+            type="number"
+            value={amount}
+            onChange={e => setAmount(e.target.value)}
+            placeholder="0"
+            inputMode="decimal"
+            onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+          />
+        </div>
+
+        {/* 3. 現金 \ 信用卡 */}
         <div className="payment-method-row">
           <button
             type="button"
@@ -355,7 +369,7 @@ export default function QuickAddPanel({ onClose }) {
           </div>
         )}
 
-        {/* Category pills with mouse drag-to-scroll & custom icon picker */}
+        {/* 4. 分類（兩排顯示，方便選擇） */}
         {isAddingCat ? (
           <div className="new-cat-box">
             <div className="new-cat-input-row">
@@ -416,9 +430,9 @@ export default function QuickAddPanel({ onClose }) {
           </div>
         ) : (
           <div
-            className={`category-scroll ${isDragging ? 'is-dragging' : ''}`}
+            className={`category-scroll two-rows ${isDragging ? 'is-dragging' : ''}`}
             {...dragProps}
-            title="可使用滑鼠按住左右拖曳或滾動滾輪"
+            title="可使用滑鼠左右拖曳或滑動查看更多分類"
           >
             {categories.map(cat => (
               <button
@@ -457,31 +471,19 @@ export default function QuickAddPanel({ onClose }) {
           </div>
         )}
 
-        {/* Amount + description row + add button */}
-        <div className="panel-input-row">
-          <input
-            className="panel-input"
-            type="number"
-            value={amount}
-            onChange={e => setAmount(e.target.value)}
-            placeholder="金額"
-            inputMode="decimal"
-            style={{ maxWidth: '110px' }}
-          />
+        {/* 5. 備註 */}
+        <div className="panel-desc-row">
           <input
             className="panel-input"
             type="text"
             value={description}
             onChange={e => setDescription(e.target.value)}
-            placeholder="備註（晚餐、電影...）"
+            placeholder="備註（例如：晚餐、電影票...選填）"
             onKeyDown={e => e.key === 'Enter' && handleSubmit()}
           />
-          <button className="panel-add-btn" onClick={handleSubmit} title="新增紀錄">
-            <Plus size={24} />
-          </button>
         </div>
 
-        {/* Date Selector Row */}
+        {/* 6. 日期 */}
         <div className="panel-date-picker-row">
           <div className="panel-date-left">
             <Calendar size={16} className="text-muted" />
@@ -505,6 +507,17 @@ export default function QuickAddPanel({ onClose }) {
             </button>
           )}
         </div>
+
+        {/* 確定記帳按鈕 */}
+        <button
+          type="button"
+          className="panel-submit-btn"
+          onClick={handleSubmit}
+          disabled={!amount || Number(amount) <= 0}
+        >
+          <Plus size={20} />
+          <span>確定記帳</span>
+        </button>
       </div>
 
       {/* Submodals */}

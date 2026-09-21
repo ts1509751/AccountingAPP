@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useExpense } from '../context/ExpenseContext';
 import { getCategoryIcon } from '../utils/categories';
-import { Trash2, Edit2, Search, X, FileSpreadsheet } from 'lucide-react';
+import { Trash2, Edit2, Search, X, FileSpreadsheet, AlertTriangle } from 'lucide-react';
 import ExportModal from './ExportModal';
 
 const formatMoney = (n) =>
@@ -42,10 +42,11 @@ function formatDateLabel(dateStr) {
 }
 
 export default function TransactionList({ onEdit }) {
-  const { transactions, filteredTransactions, deleteTransaction, categoryIcons, creditCards, hideAmounts } = useExpense();
+  const { transactions, filteredTransactions, deleteTransaction, categoryIcons, creditCards } = useExpense();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchScope, setSearchScope] = useState('month'); // 'month' | 'all'
   const [showExportModal, setShowExportModal] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
 
   const normalizedQ = normalizeQuery(searchQuery);
   const isSearching = normalizedQ.length > 0;
@@ -153,8 +154,8 @@ export default function TransactionList({ onEdit }) {
 
             {searchStats && searchStats.count > 0 && (
               <div className="search-stats-badge">
-                找到 {searchStats.count} 筆 · 支出 NT$ {hideAmounts ? '••••' : formatRaw(searchStats.expenseSum)}
-                {searchStats.incomeSum > 0 ? ` · 收入 NT$ ${hideAmounts ? '••••' : formatRaw(searchStats.incomeSum)}` : ''}
+                找到 {searchStats.count} 筆 · 支出 NT$ {formatRaw(searchStats.expenseSum)}
+                {searchStats.incomeSum > 0 ? ` · 收入 NT$ ${formatRaw(searchStats.incomeSum)}` : ''}
               </div>
             )}
           </div>
@@ -213,14 +214,14 @@ export default function TransactionList({ onEdit }) {
                     <div className="tx-meta">{tx.category} · {tx.date}</div>
                   </div>
                   <div className="tx-right">
-                    <div className={`tx-amount ${tx.type} ${hideAmounts ? 'masked' : ''}`}>
-                      {tx.type === 'expense' ? '-' : '+'}{hideAmounts ? '••••' : formatMoney(tx.amount)}
+                    <div className={`tx-amount ${tx.type}`}>
+                      {tx.type === 'expense' ? '-' : '+'}{formatMoney(tx.amount)}
                     </div>
                     <div className="tx-action-btns">
                       <button className="tx-mini-btn edit" onClick={() => onEdit(tx)} aria-label="編輯">
                         <Edit2 size={13} />
                       </button>
-                      <button className="tx-mini-btn" onClick={() => deleteTransaction(tx.id)} aria-label="刪除">
+                      <button className="tx-mini-btn" onClick={() => setItemToDelete(tx)} aria-label="刪除">
                         <Trash2 size={13} />
                       </button>
                     </div>
@@ -230,6 +231,44 @@ export default function TransactionList({ onEdit }) {
             </div>
           </div>
         ))
+      )}
+
+      {/* ── Delete Confirmation Dialog ── */}
+      {itemToDelete && (
+        <div className="modal-overlay" onClick={() => setItemToDelete(null)}>
+          <div className="confirm-delete-sheet" onClick={e => e.stopPropagation()}>
+            <div className="confirm-delete-icon">
+              <AlertTriangle size={26} />
+            </div>
+            <h3 className="confirm-delete-title">確定要刪除這筆紀錄？</h3>
+            <p className="confirm-delete-desc">
+              刪除「<strong>{itemToDelete.category}{itemToDelete.description ? ` - ${itemToDelete.description}` : ''}</strong>」
+              <br />
+              <span style={{ fontSize: '1.05rem', fontWeight: 700, marginTop: '0.4rem', display: 'inline-block', color: itemToDelete.type === 'expense' ? 'var(--accent-red)' : 'var(--accent-green)' }}>
+                {itemToDelete.type === 'expense' ? '-' : '+'}NT$ {formatMoney(itemToDelete.amount)}
+              </span>
+            </p>
+            <div className="confirm-delete-actions">
+              <button
+                type="button"
+                className="confirm-btn cancel"
+                onClick={() => setItemToDelete(null)}
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                className="confirm-btn delete"
+                onClick={async () => {
+                  await deleteTransaction(itemToDelete.id);
+                  setItemToDelete(null);
+                }}
+              >
+                確定刪除
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ── Excel Export Modal ── */}

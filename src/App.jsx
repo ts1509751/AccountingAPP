@@ -9,11 +9,14 @@ import ChartPage from './components/Chart';
 import AnalysisPage from './components/AnalysisPage';
 import InvestmentPage from './components/investment/InvestmentPage';
 import SettingsModal from './components/SettingsModal';
-import { BookOpen, BarChart2, FileText, TrendingUp, Plus, Sparkles } from 'lucide-react';
+import { Home, BarChart2, FileText, TrendingUp, Plus, Sparkles, Check } from 'lucide-react';
 import appLogo from './assets/logo.png';
 
+const formatMoney = (n) =>
+  new Intl.NumberFormat('zh-TW', { minimumFractionDigits: 0 }).format(Math.abs(n));
+
 function App() {
-  const { user, authLoading, dataLoading } = useExpense();
+  const { user, authLoading, dataLoading, successAnim } = useExpense();
   const [tab, setTab] = useState('ledger');
   const [showAdd, setShowAdd] = useState(false);
   const [showInvestmentAdd, setShowInvestmentAdd] = useState(false);
@@ -48,8 +51,8 @@ function App() {
             className={`desktop-tab ${tab === 'ledger' ? 'active' : ''}`}
             onClick={() => setTab('ledger')}
           >
-            <BookOpen size={18} />
-            <span>帳本明細</span>
+            <Home size={18} />
+            <span>首頁</span>
           </button>
           <button
             className={`desktop-tab ${tab === 'chart' ? 'active' : ''}`}
@@ -163,8 +166,8 @@ function App() {
       {/* ── Mobile Bottom Navigation (Hidden on Desktop) ── */}
       <nav className="bottom-nav mobile-only">
         <button className={`nav-tab ${tab === 'ledger' ? 'active' : ''}`} onClick={() => setTab('ledger')}>
-          <BookOpen size={19} />
-          <span>明細</span>
+          <Home size={19} />
+          <span>首頁</span>
         </button>
 
         <button className={`nav-tab ${tab === 'chart' ? 'active' : ''}`} onClick={() => setTab('chart')}>
@@ -197,6 +200,21 @@ function App() {
           <span>投資</span>
         </button>
       </nav>
+
+      {/* ── Micro-animation Success Toast ── */}
+      {successAnim && (
+        <div className="success-toast-banner" key={successAnim.key}>
+          <div className="success-toast-icon-wrapper">
+            <Check size={17} strokeWidth={3} />
+          </div>
+          <div className="success-toast-text">
+            <span className="success-toast-title">記帳成功！</span>
+            <span className="success-toast-sub">
+              {successAnim.category} · {successAnim.type === 'expense' ? '-' : '+'}NT$ {formatMoney(successAnim.amount)}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* ── Overlays ── */}
       {showAdd && <QuickAddPanel onClose={() => setShowAdd(false)} />}

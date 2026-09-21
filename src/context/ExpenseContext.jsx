@@ -281,15 +281,28 @@ export const ExpenseProvider = ({ children }) => {
     }
   };
 
+  const [successAnim, setSuccessAnim] = useState(null);
+
   const addTransaction = async (tx) => {
     if (!user) return;
     const paymentMethod = tx.paymentMethod || 'cash';
-    await addDoc(collection(db, 'transactions'), {
+    const docRef = await addDoc(collection(db, 'transactions'), {
       ...tx,
       paymentMethod,
       uid: user.uid,
       createdAt: Date.now(),
     });
+    setSuccessAnim({
+      id: docRef?.id,
+      category: tx.category,
+      type: tx.type,
+      amount: tx.amount,
+      key: Date.now(),
+    });
+    setTimeout(() => {
+      setSuccessAnim(null);
+    }, 2400);
+    return docRef;
   };
 
   const updateTransaction = async (id, data) => {
@@ -630,6 +643,7 @@ export const ExpenseProvider = ({ children }) => {
     theme, toggleTheme,
     transactions, filteredTransactions,
     addTransaction, updateTransaction, deleteTransaction,
+    successAnim,
     // Categories & Custom Icons
     categories, addCategory, updateCategory, deleteCategory, categoryIcons,
     // Credit Cards & Limits
