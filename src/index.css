@@ -1562,28 +1562,38 @@ input:checked + .toggle-slider::before {
    ===================================================== */
 @media (min-width: 768px) {
   body {
-    background: #09090f;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    background: var(--bg-primary);
+    display: block;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
   }
 
   [data-theme="light"] body {
-    background: #e2e5f0;
+    background: var(--bg-primary);
   }
 
   .app-shell {
-    max-width: 1200px;
-    width: 96%;
-    height: 92vh;
-    max-height: 900px;
-    margin: 0 auto;
-    border-radius: var(--radius-xl);
-    border: 1px solid var(--border);
-    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+    max-width: 100%;
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    max-height: none;
+    margin: 0;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
   }
 
   /* Desktop Header */
+  .app-bar {
+    padding: 0.85rem 2rem;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
   .desktop-nav-tabs {
     display: flex;
   }
@@ -1600,10 +1610,14 @@ input:checked + .toggle-slider::before {
   /* Ledger Desktop Layout (2-Column Grid) */
   .ledger-layout {
     display: grid;
-    grid-template-columns: 360px 1fr;
-    gap: 1.5rem;
-    padding: 1.5rem;
+    grid-template-columns: minmax(360px, 420px) 1fr;
+    gap: 1.75rem;
+    padding: 1.5rem 2rem 2rem;
     height: 100%;
+    max-width: 1920px;
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
     overflow: hidden;
   }
 
@@ -1611,6 +1625,7 @@ input:checked + .toggle-slider::before {
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
+    overflow-y: auto;
   }
 
   .desktop-card {
@@ -1666,13 +1681,18 @@ input:checked + .toggle-slider::before {
 
   .ledger-tx-col {
     height: 100%;
-    overflow-y: auto;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
 
   .tx-card {
+    flex: 1;
     height: 100%;
     overflow-y: auto;
-    padding: 1.25rem 1.25rem 2rem;
+    padding: 1.25rem 1.5rem 2.5rem;
+    display: flex;
+    flex-direction: column;
   }
 
   /* Chart Desktop Layout */
@@ -1680,13 +1700,17 @@ input:checked + .toggle-slider::before {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
-    padding: 1.5rem;
+    padding: 1.5rem 2rem 2.5rem;
     height: 100%;
+    max-width: 1800px;
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
     overflow-y: auto;
   }
 
   .chart-hero-card {
-    max-width: 500px;
+    max-width: 650px;
     margin: 0 auto;
     width: 100%;
   }
@@ -1707,7 +1731,7 @@ input:checked + .toggle-slider::before {
     right: auto;
     transform: translate(-50%, -50%);
     width: 90%;
-    max-width: 480px;
+    max-width: 520px;
     border-radius: var(--radius-xl);
     border: 1px solid var(--border);
     box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7);
@@ -1726,7 +1750,7 @@ input:checked + .toggle-slider::before {
 
   .modal-sheet {
     width: 90%;
-    max-width: 480px;
+    max-width: 520px;
     border-radius: var(--radius-xl);
     border: 1px solid var(--border);
     box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7);
@@ -1735,6 +1759,42 @@ input:checked + .toggle-slider::before {
 
   .modal-sheet .panel-handle {
     display: none;
+  }
+}
+
+/* Extra Large & Ultra-wide Screen Responsive (>= 1440px) */
+@media (min-width: 1440px) {
+  .app-bar {
+    padding: 0.95rem 3rem;
+  }
+
+  .ledger-layout {
+    grid-template-columns: minmax(400px, 460px) 1fr;
+    gap: 2rem;
+    padding: 1.75rem 3rem 2.5rem;
+    max-width: 2200px;
+  }
+
+  .balance-amount {
+    font-size: 3.6rem;
+  }
+}
+
+/* 2K / 4K / Ultrawide Display (>= 1920px) */
+@media (min-width: 1920px) {
+  .app-bar {
+    padding: 1.1rem 4rem;
+  }
+
+  .ledger-layout {
+    grid-template-columns: minmax(440px, 520px) 1fr;
+    gap: 2.5rem;
+    padding: 2rem 4rem 3rem;
+    max-width: 2600px;
+  }
+
+  .balance-amount {
+    font-size: 4rem;
   }
 }
 
@@ -1773,6 +1833,20 @@ input:checked + .toggle-slider::before {
   max-width: 840px;
   margin: 0 auto;
   width: 100%;
+}
+
+@media (min-width: 768px) {
+  .analysis-layout {
+    padding: 1.5rem 2.5rem 3rem;
+    max-width: 1300px;
+  }
+}
+
+@media (min-width: 1440px) {
+  .analysis-layout {
+    padding: 2rem 3.5rem 3.5rem;
+    max-width: 1600px;
+  }
 }
 
 .analysis-page-container {
@@ -2065,6 +2139,20 @@ input:checked + .toggle-slider::before {
   max-width: 920px;
   margin: 0 auto;
   width: 100%;
+}
+
+@media (min-width: 768px) {
+  .investment-layout {
+    padding: 1.5rem 2.5rem 3rem;
+    max-width: 1400px;
+  }
+}
+
+@media (min-width: 1440px) {
+  .investment-layout {
+    padding: 2rem 3.5rem 3.5rem;
+    max-width: 1700px;
+  }
 }
 
 .investment-page-container {
