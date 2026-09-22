@@ -26,8 +26,8 @@ export default function BalanceHero() {
             <span>{hideAmounts ? '隱藏中' : '顯示中'}</span>
           </button>
         </div>
-        <div className={`balance-amount ${hideAmounts ? 'masked' : ''}`}>
-          {hideAmounts ? '••••••' : formatMoney(balance)}
+        <div className={`balance-amount ${hideAmounts ? 'masked' : ''} ${balance < 0 ? 'negative' : ''}`}>
+          {hideAmounts ? '••••••' : (balance < 0 ? `-${formatMoney(balance)}` : formatMoney(balance))}
         </div>
         <div className="balance-sub">
           <span><span className="dot-green" /> 收入 {hideAmounts ? '••••' : formatMoney(income)}</span>

@@ -1,4 +1,5 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useExpense } from '../context/ExpenseContext';
 import { getCategoryIcon, POPULAR_ICONS } from '../utils/categories';
 import { X, Edit2, Trash2, Plus, Smile, Check, ArrowLeft } from 'lucide-react';
@@ -49,7 +50,7 @@ export default function CategoryModal({ isOpen, onClose }) {
     }
   };
 
-  return (
+  const modalContent = (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-sheet category-manage-modal" onClick={e => e.stopPropagation()}>
         <div className="panel-handle" />
@@ -60,7 +61,7 @@ export default function CategoryModal({ isOpen, onClose }) {
             <span style={{ fontSize: '1.2rem' }}>🏷️</span>
             <div className="modal-title" style={{ margin: 0 }}>分類與圖示管理</div>
           </div>
-          <button className="icon-btn" onClick={onClose} aria-label="關閉">
+          <button className="icon-btn modal-close-btn" onClick={onClose} aria-label="關閉">
             <X size={18} />
           </button>
         </div>
@@ -236,4 +237,6 @@ export default function CategoryModal({ isOpen, onClose }) {
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent;
 }

@@ -1,4 +1,5 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useExpense } from '../context/ExpenseContext';
 import { X, Plus, Edit2, Trash2, CreditCard, Check, AlertCircle } from 'lucide-react';
 
@@ -71,13 +72,13 @@ export default function CreditCardModal({ isOpen, onClose }) {
   };
 
   const handleDelete = async (card) => {
-    if (window.confirm(`確定要刪除信用卡「${card.name}」嗎？（已發生的刷卡紀錄仍會保留）`)) {
+    if (window.confirm(`確定要刪除「${card.name}」嗎？（已記帳之交易紀錄仍會保留）`)) {
       await deleteCreditCard(card.id);
       if (editingCardId === card.id) resetForm();
     }
   };
 
-  return (
+  const modalContent = (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-sheet credit-card-manage-modal" onClick={e => e.stopPropagation()}>
         <div className="panel-handle" />
@@ -88,7 +89,7 @@ export default function CreditCardModal({ isOpen, onClose }) {
             <CreditCard size={22} style={{ color: 'var(--accent-blue)' }} />
             <div className="modal-title" style={{ margin: 0 }}>信用卡額度管理</div>
           </div>
-          <button className="icon-btn" onClick={onClose} aria-label="關閉">
+          <button className="icon-btn modal-close-btn" onClick={onClose} aria-label="關閉">
             <X size={18} />
           </button>
         </div>
@@ -279,4 +280,6 @@ export default function CreditCardModal({ isOpen, onClose }) {
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent;
 }

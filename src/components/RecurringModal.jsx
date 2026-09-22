@@ -1,4 +1,5 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useExpense } from '../context/ExpenseContext';
 import { getCategoryIcon } from '../utils/categories';
 import { X, Plus, Edit2, Trash2, Calendar, Clock, Play, CheckCircle, AlertCircle, Banknote, CreditCard } from 'lucide-react';
@@ -103,7 +104,7 @@ export default function RecurringModal({ isOpen, onClose }) {
     .filter(r => r.active !== false && r.type !== 'income')
     .reduce((sum, r) => sum + Number(r.amount || 0), 0);
 
-  return (
+  const modalContent = (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-sheet recurring-manage-modal" onClick={e => e.stopPropagation()}>
         <div className="panel-handle" />
@@ -114,7 +115,7 @@ export default function RecurringModal({ isOpen, onClose }) {
             <Clock size={22} style={{ color: 'var(--accent-green)' }} />
             <div className="modal-title" style={{ margin: 0 }}>固定支出 (自動記帳)</div>
           </div>
-          <button className="icon-btn" onClick={onClose} aria-label="關閉">
+          <button className="icon-btn modal-close-btn" onClick={onClose} aria-label="關閉">
             <X size={18} />
           </button>
         </div>
@@ -405,4 +406,6 @@ export default function RecurringModal({ isOpen, onClose }) {
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent;
 }
