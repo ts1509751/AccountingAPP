@@ -45,6 +45,7 @@ export default function TransactionList({ onEdit }) {
   const { transactions, filteredTransactions, deleteTransaction, categoryIcons, creditCards } = useExpense();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchScope, setSearchScope] = useState('month'); // 'month' | 'all'
+  const [typeFilter, setTypeFilter] = useState('all'); // 'all' | 'expense' | 'income'
   const [showExportModal, setShowExportModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
 
@@ -64,7 +65,6 @@ export default function TransactionList({ onEdit }) {
     return desc.includes(normalizedQ) || cat.includes(normalizedQ) || amtStr.includes(normalizedQ) || dateStr.includes(normalizedQ) || payStr.includes(normalizedQ);
   };
 
-
   // Compute matches for both scopes
   const monthMatches = useMemo(
     () => (filteredTransactions || []).filter(matchTx),
@@ -76,10 +76,27 @@ export default function TransactionList({ onEdit }) {
     [transactions, normalizedQ]
   );
 
-  // Active display list
-  const displayList = isSearching
-    ? (searchScope === 'all' ? allMatches : monthMatches)
-    : (filteredTransactions || []);
+  // Base list depending on search query and scope
+  const baseList = useMemo(() => {
+    if (isSearching) {
+      return searchScope === 'all' ? allMatches : monthMatches;
+    }
+    return filteredTransactions || [];
+  }, [isSearching, searchScope, allMatches, monthMatches, filteredTransactions]);
+
+  // Counts for type tabs (全部 / 支出 / 收入)
+  const typeCounts = useMemo(() => {
+    const all = baseList.length;
+    const expense = baseList.filter(t => t.type === 'expense').length;
+    const income = baseList.filter(t => t.type === 'income').length;
+    return { all, expense, income };
+  }, [baseList]);
+
+  // Active display list filtered by type
+  const displayList = useMemo(() => {
+    if (typeFilter === 'all') return baseList;
+    return baseList.filter(t => t.type === typeFilter);
+  }, [baseList, typeFilter]);
 
   const grouped = useMemo(() => groupByDate(displayList), [displayList]);
 
@@ -162,6 +179,31 @@ export default function TransactionList({ onEdit }) {
         )}
       </div>
 
+      {/* ── Type Filter Tabs (全部 / 支出 / 收入 分開選擇) ── */}
+      <div className="tx-type-filter-bar">
+        <button
+          type="button"
+          className={`tx-type-tab ${typeFilter === 'all' ? 'active' : ''}`}
+          onClick={() => setTypeFilter('all')}
+        >
+          全部 ({typeCounts.all})
+        </button>
+        <button
+          type="button"
+          className={`tx-type-tab expense ${typeFilter === 'expense' ? 'active' : ''}`}
+          onClick={() => setTypeFilter('expense')}
+        >
+          💸 支出 ({typeCounts.expense})
+        </button>
+        <button
+          type="button"
+          className={`tx-type-tab income ${typeFilter === 'income' ? 'active' : ''}`}
+          onClick={() => setTypeFilter('income')}
+        >
+          💵 收入 ({typeCounts.income})
+        </button>
+      </div>
+
       {/* ── Empty states ── */}
       {displayList.length === 0 ? (
         <div className="empty-tx" style={{ padding: '3rem 1rem' }}>
@@ -183,6 +225,21 @@ export default function TransactionList({ onEdit }) {
                 </p>
               )}
             </>
+          ) : baseList.length > 0 ? (
+            <>
+              <div style={{ fontSize: '2.8rem' }}>📑</div>
+              <p style={{ fontWeight: 600, marginTop: '0.6rem' }}>
+                目前沒有{typeFilter === 'expense' ? '「支出」' : '「收入」'}紀錄
+              </p>
+              <button
+                type="button"
+                className="scope-switch-prompt-btn"
+                style={{ marginTop: '0.8rem' }}
+                onClick={() => setTypeFilter('all')}
+              >
+                查看全部 ({baseList.length} 筆)
+              </button>
+            </>
           ) : (
             <>
               <div style={{ fontSize: '3rem' }}>📭</div>
@@ -203,8 +260,11 @@ export default function TransactionList({ onEdit }) {
                 <div key={tx.id} className="tx-item">
                   <div className="tx-icon">{getCategoryIcon(tx.category, categoryIcons)}</div>
                   <div className="tx-info">
+                    {/* 左側：金額與付款方式標籤 */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
-                      <span className="tx-name">{tx.description || tx.category}</span>
+                      <span className={`tx-amount-left ${tx.type}`}>
+                        {tx.type === 'expense' ? '-' : '+'}{formatMoney(tx.amount)}
+                      </span>
                       <span className={`tx-payment-tag ${tx.paymentMethod === 'credit' ? 'credit' : 'cash'}`}>
                         {tx.paymentMethod === 'credit'
                           ? (tx.cardName || creditCards.find(c => c.id === tx.cardId)?.name ? `💳 ${tx.cardName || creditCards.find(c => c.id === tx.cardId)?.name}` : '💳 信用卡')
@@ -213,9 +273,14 @@ export default function TransactionList({ onEdit }) {
                     </div>
                     <div className="tx-meta">{tx.category} · {tx.date}</div>
                   </div>
+                  {/* 右側：備註內容與操作按鈕 */}
                   <div className="tx-right">
-                    <div className={`tx-amount ${tx.type}`}>
-                      {tx.type === 'expense' ? '-' : '+'}{formatMoney(tx.amount)}
+                    <div className="tx-desc-badge" title={tx.description || tx.category}>
+                      {tx.description ? (
+                        <span className="tx-desc-text">{tx.description}</span>
+                      ) : (
+                        <span className="tx-desc-placeholder">{tx.category}</span>
+                      )}
                     </div>
                     <div className="tx-action-btns">
                       <button className="tx-mini-btn edit" onClick={() => onEdit(tx)} aria-label="編輯">

@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useExpense } from '../context/ExpenseContext';
 import { getCategoryIcon, POPULAR_ICONS } from '../utils/categories';
 import { useDragScroll } from '../hooks/useDragScroll';
 import { parseNaturalLanguageInput } from '../utils/nlpParser';
-import { Plus, X, Calendar, CreditCard, Banknote, Smile, Sparkles, Check, Send } from 'lucide-react';
+import { safeEvaluateExpression } from '../utils/calc';
+import { Plus, X, Calendar, CreditCard, Banknote, Smile, Sparkles, Check, Send, Calculator, AlertTriangle } from 'lucide-react';
 import CategoryModal from './CategoryModal';
 import CreditCardModal from './CreditCardModal';
 
@@ -16,6 +17,7 @@ export default function QuickAddPanel({ onClose }) {
     categoryIcons,
     addCategory,
     addTransaction,
+    transactions,
     creditCards,
     cardUsageMap,
   } = useExpense();
@@ -28,6 +30,15 @@ export default function QuickAddPanel({ onClose }) {
   const [paymentMethod, setPaymentMethod] = useState('cash'); // 'cash' | 'credit'
   const [selectedCardId, setSelectedCardId] = useState(creditCards[0]?.id || '');
   const [selectedCategory, setSelectedCategory] = useState(categories[0] || '');
+
+  // Calculator states
+  const [showCalculator, setShowCalculator] = useState(false);
+  const hasFormula = /[+\-*\/×÷−]/.test(amount);
+  const evaluatedValue = useMemo(() => safeEvaluateExpression(amount), [amount]);
+
+  // Duplicate prevention states
+  const [duplicateWarning, setDuplicateWarning] = useState(null);
+  const lastRecordedRef = useRef(null);
 
   // Natural language bookkeeping states
   const [nlpInput, setNlpInput] = useState('');
@@ -54,6 +65,89 @@ export default function QuickAddPanel({ onClose }) {
   // Drag-to-scroll hook for desktop mouse drag & wheel
   const { dragProps, isDragging, hasMoved } = useDragScroll();
 
+  const handleKeypadPress = (k) => {
+    if (k === 'C') {
+      setAmount('');
+      return;
+    }
+    if (k === 'DEL') {
+      setAmount(prev => (prev ? String(prev).slice(0, -1) : ''));
+      return;
+    }
+    if (k === '=') {
+      const res = safeEvaluateExpression(amount);
+      if (res > 0) setAmount(String(res));
+      return;
+    }
+    if (k === 'DONE') {
+      const res = safeEvaluateExpression(amount);
+      if (res > 0) setAmount(String(res));
+      setShowCalculator(false);
+      return;
+    }
+    if (['+', '-', '×', '÷'].includes(k)) {
+      setAmount(prev => {
+        const trimmed = (prev ? String(prev) : '').trim();
+        if (!trimmed) return '';
+        if (/[+\-*\/×÷−]$/.test(trimmed)) {
+          return trimmed.slice(0, -1) + k;
+        }
+        return trimmed + k;
+      });
+      return;
+    }
+    // Numbers or dot
+    setAmount(prev => {
+      const str = prev ? String(prev) : '';
+      if (str === '0' && k !== '.') return k;
+      if (k === '.' && str.endsWith('.')) return str;
+      return str + k;
+    });
+  };
+
+  const checkDuplicate = (candidate) => {
+    const now = Date.now();
+    const THIRTY_SECONDS = 30 * 1000;
+
+    // 1. Check in-memory ref
+    if (lastRecordedRef.current) {
+      const { time, tx } = lastRecordedRef.current;
+      if (now - time < THIRTY_SECONDS) {
+        const sameType = tx.type === candidate.type;
+        const sameAmount = Number(tx.amount) === Number(candidate.amount);
+        const sameCategory = tx.category === candidate.category;
+        const sameDesc = (tx.description || '').trim() === (candidate.description || '').trim();
+        if (sameType && sameAmount && sameCategory && sameDesc) {
+          return tx;
+        }
+      }
+    }
+
+    // 2. Check context transactions
+    const match = (transactions || []).find(t => {
+      if (!t.createdAt) return false;
+      const isWithin30s = (now - t.createdAt) < THIRTY_SECONDS;
+      if (!isWithin30s) return false;
+      const sameType = t.type === candidate.type;
+      const sameAmount = Number(t.amount) === Number(candidate.amount);
+      const sameCategory = t.category === candidate.category;
+      const sameDesc = (t.description || '').trim() === (candidate.description || '').trim();
+      return sameType && sameAmount && sameCategory && sameDesc;
+    });
+
+    return match || null;
+  };
+
+  const executeAddTransaction = async (payload) => {
+    lastRecordedRef.current = { time: Date.now(), tx: payload };
+    await addTransaction(payload);
+    setAmount('');
+    setDescription('');
+    setDate(today);
+    setNlpInput('');
+    onClose();
+  };
+
   const handleAddCategory = async () => {
     const trimmed = newCatName.trim();
     if (trimmed) {
@@ -66,8 +160,9 @@ export default function QuickAddPanel({ onClose }) {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0 || !selectedCategory) return;
+  const handleSubmit = async (force = false) => {
+    const finalAmount = safeEvaluateExpression(amount);
+    if (!finalAmount || finalAmount <= 0 || !selectedCategory) return;
     
     let cardName = null;
     let cardIdToSave = null;
@@ -77,20 +172,26 @@ export default function QuickAddPanel({ onClose }) {
       if (matched) cardName = matched.name;
     }
 
-    await addTransaction({
+    const payload = {
       type,
-      amount: Number(amount),
+      amount: Number(finalAmount),
       category: selectedCategory,
       description: description.trim(),
       date: date || today,
       paymentMethod,
       cardId: cardIdToSave,
       cardName,
-    });
-    setAmount('');
-    setDescription('');
-    setDate(today);
-    onClose();
+    };
+
+    if (!force) {
+      const dup = checkDuplicate(payload);
+      if (dup) {
+        setDuplicateWarning({ candidate: payload, duplicate: dup });
+        return;
+      }
+    }
+
+    await executeAddTransaction(payload);
   };
 
   const quickExamples = [
@@ -126,7 +227,7 @@ export default function QuickAddPanel({ onClose }) {
     }
   };
 
-  const handleSubmitDirect = async (res) => {
+  const handleSubmitDirect = async (res, force = false) => {
     let cardName = null;
     let cardIdToSave = null;
     if (res.paymentMethod === 'credit') {
@@ -135,7 +236,7 @@ export default function QuickAddPanel({ onClose }) {
       if (matched) cardName = matched.name;
     }
 
-    await addTransaction({
+    const payload = {
       type: res.type,
       amount: Number(res.amount),
       category: res.category || selectedCategory || categories[0] || '生活',
@@ -144,12 +245,17 @@ export default function QuickAddPanel({ onClose }) {
       paymentMethod: res.paymentMethod,
       cardId: cardIdToSave,
       cardName,
-    });
-    setAmount('');
-    setDescription('');
-    setDate(today);
-    setNlpInput('');
-    onClose();
+    };
+
+    if (!force) {
+      const dup = checkDuplicate(payload);
+      if (dup) {
+        setDuplicateWarning({ candidate: payload, duplicate: dup });
+        return;
+      }
+    }
+
+    await executeAddTransaction(payload);
   };
 
   return (
@@ -281,19 +387,75 @@ export default function QuickAddPanel({ onClose }) {
           </button>
         </div>
 
-        {/* 2. 金額 */}
+        {/* 2. 金額 (支援數字鍵盤計算機) */}
         <div className="panel-amount-card">
           <span className="panel-amount-prefix">NT$</span>
           <input
             className="panel-amount-field"
-            type="number"
+            type="text"
             value={amount}
             onChange={e => setAmount(e.target.value)}
             placeholder="0"
-            inputMode="decimal"
+            inputMode="text"
             onKeyDown={e => e.key === 'Enter' && handleSubmit()}
           />
+          <button
+            type="button"
+            className={`calc-toggle-btn ${showCalculator ? 'active' : ''}`}
+            onClick={() => setShowCalculator(!showCalculator)}
+            title="開啟/關閉數字鍵盤計算機"
+          >
+            <Calculator size={17} />
+            <span className="calc-toggle-text">計算機</span>
+          </button>
         </div>
+
+        {/* 即時計算預覽列 */}
+        {hasFormula && (
+          <div className="calc-preview-bar">
+            <span className="calc-preview-label">計算結果：</span>
+            <span className="calc-preview-val">NT$ {formatRaw(evaluatedValue)}</span>
+            <button
+              type="button"
+              className="calc-apply-btn"
+              onClick={() => setAmount(String(evaluatedValue))}
+              title="將計算結果直接填入金額欄位"
+            >
+              = 帶入數值
+            </button>
+          </div>
+        )}
+
+        {/* 數字鍵盤計算機 */}
+        {showCalculator && (
+          <div className="calculator-keypad">
+            <div className="calc-grid">
+              <button type="button" className="calc-btn op c-btn" onClick={() => handleKeypadPress('C')}>C</button>
+              <button type="button" className="calc-btn op del-btn" onClick={() => handleKeypadPress('DEL')}>⌫</button>
+              <button type="button" className="calc-btn op" onClick={() => handleKeypadPress('÷')}>÷</button>
+              <button type="button" className="calc-btn op" onClick={() => handleKeypadPress('×')}>×</button>
+
+              <button type="button" className="calc-btn num" onClick={() => handleKeypadPress('7')}>7</button>
+              <button type="button" className="calc-btn num" onClick={() => handleKeypadPress('8')}>8</button>
+              <button type="button" className="calc-btn num" onClick={() => handleKeypadPress('9')}>9</button>
+              <button type="button" className="calc-btn op" onClick={() => handleKeypadPress('-')}>-</button>
+
+              <button type="button" className="calc-btn num" onClick={() => handleKeypadPress('4')}>4</button>
+              <button type="button" className="calc-btn num" onClick={() => handleKeypadPress('5')}>5</button>
+              <button type="button" className="calc-btn num" onClick={() => handleKeypadPress('6')}>6</button>
+              <button type="button" className="calc-btn op" onClick={() => handleKeypadPress('+')}>+</button>
+
+              <button type="button" className="calc-btn num" onClick={() => handleKeypadPress('1')}>1</button>
+              <button type="button" className="calc-btn num" onClick={() => handleKeypadPress('2')}>2</button>
+              <button type="button" className="calc-btn num" onClick={() => handleKeypadPress('3')}>3</button>
+              <button type="button" className="calc-btn eq-btn" onClick={() => handleKeypadPress('=')}>=</button>
+
+              <button type="button" className="calc-btn num" onClick={() => handleKeypadPress('0')}>0</button>
+              <button type="button" className="calc-btn num" onClick={() => handleKeypadPress('.')}>.</button>
+              <button type="button" className="calc-btn done-btn" onClick={() => handleKeypadPress('DONE')}>完成</button>
+            </div>
+          </div>
+        )}
 
         {/* 3. 現金 \ 信用卡 */}
         <div className="payment-method-row">
@@ -512,8 +674,8 @@ export default function QuickAddPanel({ onClose }) {
         <button
           type="button"
           className="panel-submit-btn"
-          onClick={handleSubmit}
-          disabled={!amount || Number(amount) <= 0}
+          onClick={() => handleSubmit(false)}
+          disabled={!evaluatedValue || evaluatedValue <= 0}
         >
           <Plus size={20} />
           <span>確定記帳</span>
@@ -530,6 +692,68 @@ export default function QuickAddPanel({ onClose }) {
         isOpen={showCreditCardModal}
         onClose={() => setShowCreditCardModal(false)}
       />
+
+      {/* ── 防止 30 秒內重複記帳提示對話框 ── */}
+      {duplicateWarning && (
+        <div className="duplicate-modal-overlay" onClick={() => setDuplicateWarning(null)}>
+          <div className="confirm-delete-sheet duplicate-warning-sheet" onClick={e => e.stopPropagation()}>
+            <div className="confirm-delete-icon duplicate-warning-icon">
+              <AlertTriangle size={28} />
+            </div>
+            <h3 className="confirm-delete-title">發現可能重複記帳</h3>
+            <p className="confirm-delete-desc" style={{ marginBottom: '1rem' }}>
+              系統偵測到您在 <strong>30 秒內</strong> 剛記錄過完全相同的一筆交易：
+            </p>
+            <div className="duplicate-candidate-card">
+              <div className="dup-field-row">
+                <span className="dup-field-label">類型</span>
+                <span className={`dup-field-val ${duplicateWarning.candidate.type}`}>
+                  {duplicateWarning.candidate.type === 'expense' ? '💸 支出' : '💵 收入'}
+                </span>
+              </div>
+              <div className="dup-field-row">
+                <span className="dup-field-label">金額</span>
+                <span className="dup-field-val amount">
+                  NT$ {formatRaw(duplicateWarning.candidate.amount)}
+                </span>
+              </div>
+              <div className="dup-field-row">
+                <span className="dup-field-label">分類</span>
+                <span className="dup-field-val">{duplicateWarning.candidate.category}</span>
+              </div>
+              {duplicateWarning.candidate.description && (
+                <div className="dup-field-row">
+                  <span className="dup-field-label">備註</span>
+                  <span className="dup-field-val">{duplicateWarning.candidate.description}</span>
+                </div>
+              )}
+            </div>
+            <p style={{ fontSize: '0.86rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
+              請問您是否仍要再次記錄這筆相同交易？
+            </p>
+            <div className="confirm-delete-actions">
+              <button
+                type="button"
+                className="confirm-btn cancel"
+                onClick={() => setDuplicateWarning(null)}
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                className="confirm-btn confirm-anyway"
+                onClick={async () => {
+                  const toAdd = duplicateWarning.candidate;
+                  setDuplicateWarning(null);
+                  await executeAddTransaction(toAdd);
+                }}
+              >
+                確認仍要記錄
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
