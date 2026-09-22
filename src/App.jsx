@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useExpense } from './context/ExpenseContext';
 import Login from './components/Login';
 import BalanceHero from './components/BalanceHero';
@@ -15,12 +15,50 @@ import appLogo from './assets/logo.png';
 const formatMoney = (n) =>
   new Intl.NumberFormat('zh-TW', { minimumFractionDigits: 0 }).format(Math.abs(n));
 
+const VALID_TABS = ['ledger', 'chart', 'analysis', 'investment'];
+
+function getTabFromHash() {
+  if (typeof window === 'undefined') return 'ledger';
+  const rawHash = window.location.hash.replace(/^#\/?/, '').trim().toLowerCase();
+  return VALID_TABS.includes(rawHash) ? rawHash : 'ledger';
+}
+
 function App() {
   const { user, authLoading, dataLoading, successAnim } = useExpense();
-  const [tab, setTab] = useState('ledger');
+  const [tab, setTab] = useState(() => getTabFromHash());
   const [showAdd, setShowAdd] = useState(false);
   const [showInvestmentAdd, setShowInvestmentAdd] = useState(false);
   const [editingTx, setEditingTx] = useState(null);
+
+  // Smooth tab navigation using browser history (avoids page reload on mobile back/forward)
+  const navigateToTab = (newTab) => {
+    if (newTab === tab) return;
+    setTab(newTab);
+    window.history.pushState({ tab: newTab }, '', `#${newTab}`);
+  };
+
+  useEffect(() => {
+    const currentTab = getTabFromHash();
+    if (!window.history.state || window.history.state.tab !== currentTab) {
+      window.history.replaceState({ tab: currentTab }, '', `#${currentTab}`);
+    }
+
+    const handlePopState = (e) => {
+      const targetTab = e.state?.tab || getTabFromHash();
+      setTab(targetTab);
+      setShowAdd(false);
+      setShowInvestmentAdd(false);
+      setEditingTx(null);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('hashchange', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('hashchange', handlePopState);
+    };
+  }, []);
 
   if (authLoading) {
     return (
@@ -49,28 +87,28 @@ function App() {
         <nav className="desktop-nav-tabs">
           <button
             className={`desktop-tab ${tab === 'ledger' ? 'active' : ''}`}
-            onClick={() => setTab('ledger')}
+            onClick={() => navigateToTab('ledger')}
           >
             <Home size={18} />
             <span>首頁</span>
           </button>
           <button
             className={`desktop-tab ${tab === 'chart' ? 'active' : ''}`}
-            onClick={() => setTab('chart')}
+            onClick={() => navigateToTab('chart')}
           >
             <BarChart2 size={18} />
             <span>統計圖表</span>
           </button>
           <button
             className={`desktop-tab ${tab === 'analysis' ? 'active' : ''}`}
-            onClick={() => setTab('analysis')}
+            onClick={() => navigateToTab('analysis')}
           >
             <FileText size={18} />
             <span>分析預算</span>
           </button>
           <button
             className={`desktop-tab ${tab === 'investment' ? 'active' : ''}`}
-            onClick={() => setTab('investment')}
+            onClick={() => navigateToTab('investment')}
           >
             <TrendingUp size={18} />
             <span>投資理財</span>
@@ -165,12 +203,12 @@ function App() {
 
       {/* ── Mobile Bottom Navigation (Hidden on Desktop) ── */}
       <nav className="bottom-nav mobile-only">
-        <button className={`nav-tab ${tab === 'ledger' ? 'active' : ''}`} onClick={() => setTab('ledger')}>
+        <button className={`nav-tab ${tab === 'ledger' ? 'active' : ''}`} onClick={() => navigateToTab('ledger')}>
           <Home size={19} />
           <span>首頁</span>
         </button>
 
-        <button className={`nav-tab ${tab === 'chart' ? 'active' : ''}`} onClick={() => setTab('chart')}>
+        <button className={`nav-tab ${tab === 'chart' ? 'active' : ''}`} onClick={() => navigateToTab('chart')}>
           <BarChart2 size={19} />
           <span>圖表</span>
         </button>
@@ -190,12 +228,12 @@ function App() {
           <Plus size={26} />
         </button>
 
-        <button className={`nav-tab ${tab === 'analysis' ? 'active' : ''}`} onClick={() => setTab('analysis')}>
+        <button className={`nav-tab ${tab === 'analysis' ? 'active' : ''}`} onClick={() => navigateToTab('analysis')}>
           <FileText size={19} />
           <span>報告</span>
         </button>
 
-        <button className={`nav-tab ${tab === 'investment' ? 'active' : ''}`} onClick={() => setTab('investment')}>
+        <button className={`nav-tab ${tab === 'investment' ? 'active' : ''}`} onClick={() => navigateToTab('investment')}>
           <TrendingUp size={19} />
           <span>投資</span>
         </button>
