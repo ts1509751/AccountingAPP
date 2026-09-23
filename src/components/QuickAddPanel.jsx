@@ -65,7 +65,16 @@ export default function QuickAddPanel({ onClose }) {
   // Drag-to-scroll hook for desktop mouse drag & wheel
   const { dragProps, isDragging, hasMoved } = useDragScroll();
 
+  const amountInputRef = useRef(null);
+  const [activeKey, setActiveKey] = useState(null);
+
+  const flashKey = (k) => {
+    setActiveKey(k);
+    setTimeout(() => setActiveKey(null), 150);
+  };
+
   const handleKeypadPress = (k) => {
+    flashKey(k);
     if (k === 'C') {
       setAmount('');
       return;
@@ -76,12 +85,12 @@ export default function QuickAddPanel({ onClose }) {
     }
     if (k === '=') {
       const res = safeEvaluateExpression(amount);
-      if (res > 0) setAmount(String(res));
+      if (typeof res === 'number' && !isNaN(res)) setAmount(String(res));
       return;
     }
     if (k === 'DONE') {
       const res = safeEvaluateExpression(amount);
-      if (res > 0) setAmount(String(res));
+      if (typeof res === 'number' && !isNaN(res) && res > 0) setAmount(String(res));
       setShowCalculator(false);
       return;
     }
@@ -104,6 +113,140 @@ export default function QuickAddPanel({ onClose }) {
       return str + k;
     });
   };
+
+  // Keyboard event handler on the amount field itself
+  const handleAmountKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      flashKey('DONE');
+      handleSubmit();
+      return;
+    }
+    if (e.key === '=') {
+      e.preventDefault();
+      handleKeypadPress('=');
+      return;
+    }
+    if (e.key === '+') {
+      e.preventDefault();
+      handleKeypadPress('+');
+      return;
+    }
+    if (e.key === '-') {
+      e.preventDefault();
+      handleKeypadPress('-');
+      return;
+    }
+    if (e.key === '*' || e.key === 'x' || e.key === 'X') {
+      e.preventDefault();
+      handleKeypadPress('×');
+      return;
+    }
+    if (e.key === '/') {
+      e.preventDefault();
+      handleKeypadPress('÷');
+      return;
+    }
+    if (e.key === 'c' || e.key === 'C') {
+      e.preventDefault();
+      handleKeypadPress('C');
+      return;
+    }
+    if (e.key === 'Backspace') {
+      flashKey('DEL');
+      return;
+    }
+    if ((e.key >= '0' && e.key <= '9') || e.key === '.') {
+      flashKey(e.key);
+      return;
+    }
+  };
+
+  // Auto-focus amount input on desktop when opening panel
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+      const timer = setTimeout(() => {
+        amountInputRef.current?.focus();
+        amountInputRef.current?.select();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  // Global keyboard listener on desktop to capture calculator keys seamlessly
+  useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      if (showCategoryModal || showCreditCardModal || duplicateWarning) return;
+
+      const activeEl = document.activeElement;
+      const tag = activeEl?.tagName?.toLowerCase();
+      const isInput = tag === 'input' || tag === 'textarea';
+      const isOtherInput = isInput && activeEl !== amountInputRef.current;
+
+      // Don't intercept if user is typing in another text field (NLP or Description or New Category)
+      if (isOtherInput) return;
+
+      // Handle Escape: close calculator if open, or close panel
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (showCalculator) {
+          setShowCalculator(false);
+          amountInputRef.current?.focus();
+        } else {
+          onClose();
+        }
+        return;
+      }
+
+      // If focus is outside amountInputRef, capture calculator/numpad keystrokes
+      if (activeEl !== amountInputRef.current) {
+        if (e.key >= '0' && e.key <= '9') {
+          e.preventDefault();
+          handleKeypadPress(e.key);
+          amountInputRef.current?.focus();
+        } else if (e.key === '.') {
+          e.preventDefault();
+          handleKeypadPress('.');
+          amountInputRef.current?.focus();
+        } else if (e.key === '+') {
+          e.preventDefault();
+          handleKeypadPress('+');
+          amountInputRef.current?.focus();
+        } else if (e.key === '-') {
+          e.preventDefault();
+          handleKeypadPress('-');
+          amountInputRef.current?.focus();
+        } else if (e.key === '*' || e.key === 'x' || e.key === 'X') {
+          e.preventDefault();
+          handleKeypadPress('×');
+          amountInputRef.current?.focus();
+        } else if (e.key === '/') {
+          e.preventDefault();
+          handleKeypadPress('÷');
+          amountInputRef.current?.focus();
+        } else if (e.key === '=') {
+          e.preventDefault();
+          handleKeypadPress('=');
+          amountInputRef.current?.focus();
+        } else if (e.key === 'c' || e.key === 'C') {
+          e.preventDefault();
+          handleKeypadPress('C');
+          amountInputRef.current?.focus();
+        } else if (e.key === 'Backspace') {
+          e.preventDefault();
+          handleKeypadPress('DEL');
+          amountInputRef.current?.focus();
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          flashKey('DONE');
+          handleSubmit();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [amount, showCalculator, showCategoryModal, showCreditCardModal, duplicateWarning, onClose, type, selectedCategory, description, date, paymentMethod, selectedCardId]);
 
   const checkDuplicate = (candidate) => {
     const now = Date.now();
@@ -387,23 +530,27 @@ export default function QuickAddPanel({ onClose }) {
           </button>
         </div>
 
-        {/* 2. 金額 (支援數字鍵盤計算機) */}
+        {/* 2. 金額 (支援數字鍵盤計算機與鍵盤直接輸入) */}
         <div className="panel-amount-card">
           <span className="panel-amount-prefix">NT$</span>
           <input
+            ref={amountInputRef}
             className="panel-amount-field"
             type="text"
             value={amount}
-            onChange={e => setAmount(e.target.value)}
+            onChange={e => setAmount(e.target.value.replace(/[^0-9.+\-*\/×÷−]/g, ''))}
             placeholder="0"
             inputMode="text"
-            onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+            onKeyDown={handleAmountKeyDown}
           />
           <button
             type="button"
             className={`calc-toggle-btn ${showCalculator ? 'active' : ''}`}
-            onClick={() => setShowCalculator(!showCalculator)}
-            title="開啟/關閉數字鍵盤計算機"
+            onClick={() => {
+              setShowCalculator(prev => !prev);
+              setTimeout(() => amountInputRef.current?.focus(), 60);
+            }}
+            title="開啟/關閉數字鍵盤計算機 (支援電腦鍵盤直接按)"
           >
             <Calculator size={17} />
             <span className="calc-toggle-text">計算機</span>
@@ -418,8 +565,11 @@ export default function QuickAddPanel({ onClose }) {
             <button
               type="button"
               className="calc-apply-btn"
-              onClick={() => setAmount(String(evaluatedValue))}
-              title="將計算結果直接填入金額欄位"
+              onClick={() => {
+                setAmount(String(evaluatedValue));
+                amountInputRef.current?.focus();
+              }}
+              title="將計算結果直接填入金額欄位 (鍵盤按 = 亦可直接計算)"
             >
               = 帶入數值
             </button>
@@ -429,30 +579,34 @@ export default function QuickAddPanel({ onClose }) {
         {/* 數字鍵盤計算機 */}
         {showCalculator && (
           <div className="calculator-keypad">
+            <div className="calc-keyboard-hint desktop-only">
+              <span>⌨️ 支援鍵盤直接輸入</span>
+              <span className="calc-hint-shortcuts">(= 計算 / Enter 記帳 / C 清除 / Esc 關閉)</span>
+            </div>
             <div className="calc-grid">
-              <button type="button" className="calc-btn op c-btn" onClick={() => handleKeypadPress('C')}>C</button>
-              <button type="button" className="calc-btn op del-btn" onClick={() => handleKeypadPress('DEL')}>⌫</button>
-              <button type="button" className="calc-btn op" onClick={() => handleKeypadPress('÷')}>÷</button>
-              <button type="button" className="calc-btn op" onClick={() => handleKeypadPress('×')}>×</button>
+              <button type="button" className={`calc-btn op c-btn ${activeKey === 'C' ? 'keyboard-active' : ''}`} onClick={() => handleKeypadPress('C')}>C</button>
+              <button type="button" className={`calc-btn op del-btn ${activeKey === 'DEL' ? 'keyboard-active' : ''}`} onClick={() => handleKeypadPress('DEL')}>⌫</button>
+              <button type="button" className={`calc-btn op ${activeKey === '÷' ? 'keyboard-active' : ''}`} onClick={() => handleKeypadPress('÷')}>÷</button>
+              <button type="button" className={`calc-btn op ${activeKey === '×' ? 'keyboard-active' : ''}`} onClick={() => handleKeypadPress('×')}>×</button>
 
-              <button type="button" className="calc-btn num" onClick={() => handleKeypadPress('7')}>7</button>
-              <button type="button" className="calc-btn num" onClick={() => handleKeypadPress('8')}>8</button>
-              <button type="button" className="calc-btn num" onClick={() => handleKeypadPress('9')}>9</button>
-              <button type="button" className="calc-btn op" onClick={() => handleKeypadPress('-')}>-</button>
+              <button type="button" className={`calc-btn num ${activeKey === '7' ? 'keyboard-active' : ''}`} onClick={() => handleKeypadPress('7')}>7</button>
+              <button type="button" className={`calc-btn num ${activeKey === '8' ? 'keyboard-active' : ''}`} onClick={() => handleKeypadPress('8')}>8</button>
+              <button type="button" className={`calc-btn num ${activeKey === '9' ? 'keyboard-active' : ''}`} onClick={() => handleKeypadPress('9')}>9</button>
+              <button type="button" className={`calc-btn op ${activeKey === '-' ? 'keyboard-active' : ''}`} onClick={() => handleKeypadPress('-')}>-</button>
 
-              <button type="button" className="calc-btn num" onClick={() => handleKeypadPress('4')}>4</button>
-              <button type="button" className="calc-btn num" onClick={() => handleKeypadPress('5')}>5</button>
-              <button type="button" className="calc-btn num" onClick={() => handleKeypadPress('6')}>6</button>
-              <button type="button" className="calc-btn op" onClick={() => handleKeypadPress('+')}>+</button>
+              <button type="button" className={`calc-btn num ${activeKey === '4' ? 'keyboard-active' : ''}`} onClick={() => handleKeypadPress('4')}>4</button>
+              <button type="button" className={`calc-btn num ${activeKey === '5' ? 'keyboard-active' : ''}`} onClick={() => handleKeypadPress('5')}>5</button>
+              <button type="button" className={`calc-btn num ${activeKey === '6' ? 'keyboard-active' : ''}`} onClick={() => handleKeypadPress('6')}>6</button>
+              <button type="button" className={`calc-btn op ${activeKey === '+' ? 'keyboard-active' : ''}`} onClick={() => handleKeypadPress('+')}>+</button>
 
-              <button type="button" className="calc-btn num" onClick={() => handleKeypadPress('1')}>1</button>
-              <button type="button" className="calc-btn num" onClick={() => handleKeypadPress('2')}>2</button>
-              <button type="button" className="calc-btn num" onClick={() => handleKeypadPress('3')}>3</button>
-              <button type="button" className="calc-btn eq-btn" onClick={() => handleKeypadPress('=')}>=</button>
+              <button type="button" className={`calc-btn num ${activeKey === '1' ? 'keyboard-active' : ''}`} onClick={() => handleKeypadPress('1')}>1</button>
+              <button type="button" className={`calc-btn num ${activeKey === '2' ? 'keyboard-active' : ''}`} onClick={() => handleKeypadPress('2')}>2</button>
+              <button type="button" className={`calc-btn num ${activeKey === '3' ? 'keyboard-active' : ''}`} onClick={() => handleKeypadPress('3')}>3</button>
+              <button type="button" className={`calc-btn eq-btn ${activeKey === '=' ? 'keyboard-active' : ''}`} onClick={() => handleKeypadPress('=')}>=</button>
 
-              <button type="button" className="calc-btn num" onClick={() => handleKeypadPress('0')}>0</button>
-              <button type="button" className="calc-btn num" onClick={() => handleKeypadPress('.')}>.</button>
-              <button type="button" className="calc-btn done-btn" onClick={() => handleKeypadPress('DONE')}>完成</button>
+              <button type="button" className={`calc-btn num ${activeKey === '0' ? 'keyboard-active' : ''}`} onClick={() => handleKeypadPress('0')}>0</button>
+              <button type="button" className={`calc-btn num ${activeKey === '.' ? 'keyboard-active' : ''}`} onClick={() => handleKeypadPress('.')}>.</button>
+              <button type="button" className={`calc-btn done-btn ${activeKey === 'DONE' ? 'keyboard-active' : ''}`} onClick={() => handleKeypadPress('DONE')}>完成</button>
             </div>
           </div>
         )}

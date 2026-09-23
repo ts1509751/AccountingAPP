@@ -4212,6 +4212,29 @@ input:checked + .toggle-slider::before {
   filter: brightness(1.08);
 }
 
+.calc-keyboard-hint {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.2rem 0.35rem 0.5rem;
+  border-bottom: 1px dashed var(--border);
+  margin-bottom: 0.55rem;
+  user-select: none;
+}
+.calc-hint-shortcuts {
+  color: var(--accent-blue);
+  font-weight: 600;
+}
+.calc-btn.keyboard-active {
+  transform: scale(0.93) !important;
+  filter: brightness(1.35) !important;
+  box-shadow: 0 0 0 2px var(--accent-blue) !important;
+  border-color: var(--accent-blue) !important;
+  transition: all 0.08s ease !important;
+}
+
 /* =====================================================
    30-SECOND DUPLICATE WARNING MODAL
    ===================================================== */
