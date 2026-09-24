@@ -15,10 +15,10 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js (v22 for Capacitor 8)
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       - name: Set up Java JDK 21
@@ -38,9 +38,17 @@ jobs:
       - name: Build Web Application
         run: npm run build
 
-      - name: Copy Assets to Capacitor Android
+      - name: Sync Capacitor Android
+        run: npx cap sync android
+
+      - name: Verify Web Assets in Android Project
         run: |
-          npx cap copy android --verbose 2>&1 | tee -a $GITHUB_STEP_SUMMARY
+          if [ ! -f android/app/src/main/assets/public/index.html ]; then
+            echo "Error: index.html is missing in android/app/src/main/assets/public!"
+            exit 1
+          fi
+          echo "Verified: android/app/src/main/assets/public/index.html exists."
+          ls -la android/app/src/main/assets/public/
 
       - name: Build Debug APK
         run: |
