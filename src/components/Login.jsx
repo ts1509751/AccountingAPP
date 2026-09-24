@@ -27,20 +27,36 @@ export default function Login() {
       setLoading(true);
 
       if (Capacitor.isNativePlatform()) {
-        // Native Android login via Play Services / Credential Manager
-        const authPromise = FirebaseAuthentication.signInWithGoogle();
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('登入操作逾時，請重試或改用其他登入方式')), 25000)
-        );
+        let result;
+        try {
+          // Attempt 1: Modern Credential Manager
+          const authPromise = FirebaseAuthentication.signInWithGoogle({ useCredentialManager: true });
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('TIMEOUT')), 15000)
+          );
+          result = await Promise.race([authPromise, timeoutPromise]);
+        } catch (credErr) {
+          console.warn('Credential Manager failed or timed out, trying fallback client:', credErr);
+          // Attempt 2: Classic Google Sign In Client
+          result = await FirebaseAuthentication.signInWithGoogle({ useCredentialManager: false });
+        }
 
-        const result = await Promise.race([authPromise, timeoutPromise]);
-        const idToken = result.credential?.idToken;
+        const idToken = result?.credential?.idToken || result?.idToken;
 
         if (idToken) {
           const credential = GoogleAuthProvider.credential(idToken);
           await signInWithCredential(auth, credential);
+        } else if (result?.user) {
+          // If native Firebase user is signed in, fetch the Firebase token
+          const tokenRes = await FirebaseAuthentication.getIdToken();
+          if (tokenRes?.token) {
+            const credential = GoogleAuthProvider.credential(tokenRes.token);
+            await signInWithCredential(auth, credential);
+          } else {
+            throw new Error('未取得授權 Token，請確認 Firebase 設定');
+          }
         } else {
-          throw new Error('未取得 Google 登入授權憑證');
+          throw new Error('未取得 Google 登入憑證');
         }
       } else {
         // Web browser popup flow
@@ -50,29 +66,22 @@ export default function Login() {
       console.error('Google Sign-In Error:', error);
       setLoading(false);
 
-      const code = error.code || '';
-      const message = error.message || '';
+      const code = String(error.code || '');
+      const message = String(error.message || '');
 
-      // User closed popup or cancelled dialog
-      if (
-        code === 'auth/popup-closed-by-user' ||
-        message.includes('cancel') ||
-        message.includes('16') ||
-        message.includes('Canceled')
-      ) {
+      // Only suppress if purely closed by user on web
+      if (code === 'auth/popup-closed-by-user') {
         return;
       }
 
-      if (code === 'auth/operation-not-allowed') {
-        setErrorMsg('請先至 Firebase 控制台啟用 Google 登入功能');
+      if (code === 'auth/operation-not-allowed' || message.includes('OPERATION_NOT_ALLOWED')) {
+        setErrorMsg('【重要】請至 Firebase 控制台「Authentication > 登入方式」將 Google 設為啟用！');
       } else if (code === 'auth/unauthorized-domain') {
         setErrorMsg('目前的網域尚未在 Firebase 授權，請檢查設定');
-      } else if (Capacitor.isNativePlatform()) {
-        setErrorMsg(
-          '手機端 Google 登入需綁定 Firebase 憑證。建議您切換「Email 帳號」或點擊下方「訪客體驗」立即進入記帳本！'
-        );
+      } else if (message.includes('10') || message.includes('DEVELOPER_ERROR')) {
+        setErrorMsg('Google 登入設定不符 (代碼 10)：請確認 Firebase 控制台已啟用 Google 登入並填寫專案支援電子郵件。');
       } else {
-        setErrorMsg(`登入失敗：${message || code || '請稍後重試'}`);
+        setErrorMsg(`登入失敗 (${code || message})。請確認 Firebase 已啟用 Google 登入，或切換上方「Email 帳號」/ 下方「訪客體驗」直接進入！`);
       }
     }
   };
