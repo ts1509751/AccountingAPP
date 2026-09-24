@@ -55,6 +55,14 @@ jobs:
           cd android
           ./gradlew assembleDebug --stacktrace
 
+      - name: Print Keystore SHA-1 Fingerprint
+        run: |
+          echo "## 🔑 Android Debug Keystore SHA-1" >> $GITHUB_STEP_SUMMARY
+          echo "若要在 Android 手機上啟用 Google 帳號登入，請至 Firebase 專案設定 > 您的應用程式 > 新增 Android 應用程式，填入以下 SHA-1 憑證：" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android 2>/dev/null | grep -E "(SHA1|SHA256):" >> $GITHUB_STEP_SUMMARY || true
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
       - name: Upload APK to Artifacts
         uses: actions/upload-artifact@v4
         with:

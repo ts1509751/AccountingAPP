@@ -6,12 +6,13 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "oxlint",
+    "lint": "oxlint src",
     "preview": "vite preview",
     "android:sync": "vite build && cap sync android",
     "android:open": "cap open android"
   },
   "dependencies": {
+    "@capacitor-firebase/authentication": "^8.5.2",
     "@capacitor/android": "^8.5.2",
     "@capacitor/core": "^8.5.2",
     "firebase": "^12.19.0",

@@ -2,6 +2,8 @@ import { createContext, useContext, useState, useEffect, useMemo, useRef } from 
 import { auth, db } from '../firebase/config';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc, doc, setDoc, writeBatch, getDocs } from 'firebase/firestore';
+import { Capacitor } from '@capacitor/core';
+import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import { DEFAULT_CATEGORIES } from '../utils/categories';
 
 const ExpenseContext = createContext();
@@ -188,7 +190,16 @@ export const ExpenseProvider = ({ children }) => {
   }, [user]);
 
   const toggleTheme = () => setTheme(p => p === 'dark' ? 'light' : 'dark');
-  const logout = () => signOut(auth);
+  const logout = async () => {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await FirebaseAuthentication.signOut();
+      } catch (e) {
+        console.warn('Native signOut error:', e);
+      }
+    }
+    await signOut(auth);
+  };
 
   const prevMonth = () => {
     if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
