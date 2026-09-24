@@ -39,7 +39,8 @@ jobs:
         run: npm run build
 
       - name: Copy Assets to Capacitor Android
-        run: npx cap copy android
+        run: |
+          npx cap copy android --verbose 2>&1 | tee -a $GITHUB_STEP_SUMMARY
 
       - name: Build Debug APK
         run: |
